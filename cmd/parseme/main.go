@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	parser := parseme.NewHtmlParser("pkg/parser.go")
+	parser := parseme.NewHtmlParser("cmd/parseme/example.html")
 	bytes, err := parser.Parse()
 
 	if err != nil {
@@ -16,6 +16,6 @@ func main() {
 		os.Exit(-1)
 	}
 
-	text := string(*bytes)
+	text := *bytes
 	fmt.Println(text)
 }

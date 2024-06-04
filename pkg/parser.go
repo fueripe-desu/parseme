@@ -1,67 +1,166 @@
 package parseme
 
 import (
-	"os"
+	"unicode"
 )
 
-type HtmlParser struct {
-	filepath string
+type parseBuffer struct {
+	value []byte
 }
 
-func NewHtmlParser(filepath string) *HtmlParser {
-	return &HtmlParser{filepath: filepath}
+func (b *parseBuffer) append(char byte) {
+	b.value = append(b.value, char)
 }
 
-func (p *HtmlParser) Parse() (*[]byte, error) {
-	file, size, fileErr := openFile(p.filepath)
-
-	if fileErr != nil {
-		return nil, fileErr
-	}
-
-	bytes, readErr := readFile(file, size)
-
-	if readErr != nil {
-		return nil, readErr
-	}
-
-	return bytes, nil
+func (b *parseBuffer) appendAll(chars *[]byte) {
+	b.value = append(b.value, (*chars)...)
 }
 
-func openFile(filepath string) (*os.File, int64, error) {
-	fileInfo, err := os.Stat(filepath)
-
-	if err != nil {
-		return nil, 0, &FileNotFoundError{Filepath: filepath}
-	}
-
-	if fileInfo.IsDir() {
-		return nil, 0, &FileIsDirError{Filepath: filepath}
-	}
-
-	file, err := os.Open(filepath)
-
-	if err != nil {
-		return nil, 0, &FileError{Message: err.Error() + ":", Filepath: filepath}
-	}
-
-	return file, fileInfo.Size(), nil
+func (b *parseBuffer) get() *[]byte {
+	return &b.value
 }
 
-func readFile(file *os.File, size int64) (*[]byte, error) {
-	defer file.Close()
-	_, err := file.Seek(0, 0)
+func (b *parseBuffer) clear() {
+	b.value = b.value[:0]
+}
 
-	if err != nil {
-		return nil, err
+func parseBytes(bytes *[]byte) *[]preToken {
+	buffer := &parseBuffer{}
+	tokens := make([]preToken, 0)
+
+	// Indicates if char is inside a tag
+	isTag := false
+
+	// Indicates if next element is a property value
+	isProperty := false
+
+	for i := 0; i < len(*bytes); i++ {
+		current := (*bytes)[i]
+
+		if unicode.IsControl(rune(current)) {
+			continue
+		}
+
+		if isTag {
+			// If inside a tag
+			lastIndex := len(tokens) - 1
+			last := tokens[lastIndex]
+
+			if current == byte('/') {
+				// Replace last opening token with slash opening
+				if last.tokenType == tagStart {
+					token := &preToken{tokenType: slashTagStart, value: "</"}
+					tokens = append(tokens[:lastIndex], *token)
+				} else {
+					// Handle '/' in the middle of the token
+					// TODO: Add warning in error pool
+				}
+				continue
+			}
+
+			if current == byte(' ') {
+				continue
+			}
+
+			if current == byte('=') {
+				isProperty = true
+				continue
+			}
+
+			if current == byte('>') {
+				isTag = false
+				token := &preToken{tokenType: tagEnd, value: ">"}
+				tokens = append(tokens, *token)
+				continue
+			}
+
+			if unicode.IsGraphic(rune(current)) {
+				i = parseTagString(i, bytes, buffer)
+				value := buffer.get()
+				var token *preToken
+
+				if last.tokenType == tagStart || last.tokenType == slashTagStart {
+					token = &preToken{tokenType: tagName, value: string(*value)}
+				} else if last.tokenType == tagName {
+					token = &preToken{tokenType: propertyName, value: string(*value)}
+				} else if last.tokenType == propertyName {
+					if isProperty {
+						token = &preToken{tokenType: propertyValue, value: string(*value)}
+						isProperty = false
+					} else {
+						token = &preToken{tokenType: propertyValue, value: string(*value)}
+					}
+				}
+				tokens = append(tokens, *token)
+				buffer.clear()
+				continue
+			}
+		} else {
+			// If outside a tag
+
+			if current == byte('<') {
+				isTag = true
+				token := &preToken{tokenType: tagStart, value: "<"}
+				tokens = append(tokens, *token)
+			} else if current == byte(' ') {
+				continue
+			} else {
+				i = parseContent(i, bytes, buffer)
+				value := buffer.get()
+				token := &preToken{tokenType: content, value: string(*value)}
+				tokens = append(tokens, *token)
+				buffer.clear()
+			}
+		}
 	}
 
-	bytes := make([]byte, size)
-	_, readErr := file.Read(bytes)
+	return &tokens
+}
 
-	if readErr != nil {
-		return nil, readErr
+func removeControl(data *[]byte) *[]byte {
+	result := make([]byte, 0, len(*data))
+	for _, b := range *data {
+		if !unicode.IsControl(rune(b)) {
+			result = append(result, b)
+		}
+	}
+	return &result
+}
+
+func parseContent(start int, bytes *[]byte, buffer *parseBuffer) int {
+	i := start
+	for ; i < len(*bytes); i++ {
+		current := (*bytes)[i]
+
+		if current == byte('<') {
+			break
+		}
+
+		buffer.append(current)
 	}
 
-	return &bytes, nil
+	return i - 1
+}
+
+func parseTagString(start int, bytes *[]byte, buffer *parseBuffer) int {
+	i := start
+	for ; i < len(*bytes); i++ {
+		current := (*bytes)[i]
+
+		if current == byte(' ') {
+			break
+		}
+
+		if current == byte('>') {
+			break
+		}
+
+		if current == byte('=') {
+			break
+		}
+
+		buffer.append(current)
+	}
+
+	return i - 1
 }
