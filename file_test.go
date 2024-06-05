@@ -25,13 +25,13 @@ func Test_openFile(t *testing.T) {
 	}{
 		{
 			"open file",
-			"../test_data/example1.html",
+			"test_data/example1.html",
 			openFunc,
 			nil,
 		},
 		{
 			"open unicode file",
-			"../test_data/example2.html",
+			"test_data/example2.html",
 			openFunc,
 			nil,
 		},
@@ -58,13 +58,13 @@ func Test_openFile(t *testing.T) {
 	}{
 		{
 			"regular size file",
-			"../test_data/example1.html",
+			"test_data/example1.html",
 			141,
 			nil,
 		},
 		{
 			"empty file",
-			"../test_data/example3.html",
+			"test_data/example3.html",
 			0,
 			nil,
 		},
@@ -110,7 +110,7 @@ func Test_openFile(t *testing.T) {
 
 	t.Run("file without read permission", func(t *testing.T) {
 		assert := assert.New(t)
-		filepath := "../test_data/temp_permission.html"
+		filepath := "test_data/temp_permission.html"
 		file, createErr := os.Create(filepath)
 
 		t.Cleanup(func() {
@@ -155,17 +155,17 @@ func Test_readFile(t *testing.T) {
 	}{
 		{
 			"read file",
-			"../test_data/example1.html",
+			"test_data/example1.html",
 			func() *[]byte {
-				bytes, _ := os.ReadFile("../test_data/example1.html")
+				bytes, _ := os.ReadFile("test_data/example1.html")
 				return &bytes
 			},
 		},
 		{
 			"read file with unicode chars",
-			"../test_data/example2.html",
+			"test_data/example2.html",
 			func() *[]byte {
-				bytes, _ := os.ReadFile("../test_data/example2.html")
+				bytes, _ := os.ReadFile("test_data/example2.html")
 				return &bytes
 			},
 		},
@@ -180,21 +180,21 @@ func Test_readFile(t *testing.T) {
 	}{
 		{
 			"negative size as parameter",
-			"../test_data/example1.html",
+			"test_data/example1.html",
 			-1,
 			[]byte{},
 			&ReadNegativeSizeError{},
 		},
 		{
 			"zero size as parameter",
-			"../test_data/example1.html",
+			"test_data/example1.html",
 			0,
 			[]byte{},
 			nil,
 		},
 		{
 			"size less than file length",
-			"../test_data/example1.html",
+			"test_data/example1.html",
 			2,
 			[]byte{60, 104},
 			nil,
