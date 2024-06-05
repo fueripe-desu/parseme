@@ -5,4 +5,4 @@ run: build
 	@./bin/parseme
 
 test:
-	@go test ./...
+	@go test ./... -v
