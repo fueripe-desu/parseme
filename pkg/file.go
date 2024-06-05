@@ -1,6 +1,9 @@
 package parseme
 
-import "os"
+import (
+	"os"
+	"strings"
+)
 
 func fetchFileContents(filepath string) (*[]byte, error) {
 	file, size, fileErr := openFile(filepath)
@@ -31,8 +34,12 @@ func openFile(filepath string) (*os.File, int64, error) {
 
 	file, err := os.Open(filepath)
 
+	if err != nil && strings.Contains(err.Error(), "permission denied") {
+		return nil, 0, &FileNotReadable{Filepath: filepath}
+	}
+
 	if err != nil {
-		return nil, 0, &FileError{Message: err.Error() + ":", Filepath: filepath}
+		return nil, 0, err
 	}
 
 	return file, fileInfo.Size(), nil
@@ -41,6 +48,10 @@ func openFile(filepath string) (*os.File, int64, error) {
 func readFile(file *os.File, size int64) (*[]byte, error) {
 	defer file.Close()
 	_, err := file.Seek(0, 0)
+
+	if size < 0 {
+		return nil, &ReadNegativeSizeError{}
+	}
 
 	if err != nil {
 		return nil, err

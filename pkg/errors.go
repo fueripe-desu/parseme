@@ -28,3 +28,18 @@ func (e *FileIsDirError) Error() string {
 	fileError := &FileError{Message: "Given filepath points to a dir instead of a file:", Filepath: e.Filepath}
 	return fileError.Error()
 }
+
+type FileNotReadable struct {
+	Filepath string
+}
+
+func (e *FileNotReadable) Error() string {
+	fileError := &FileError{Message: "File does not have read permission:", Filepath: e.Filepath}
+	return fileError.Error()
+}
+
+type ReadNegativeSizeError struct{}
+
+func (e *ReadNegativeSizeError) Error() string {
+	return "Cannot read file if scale is negative:"
+}
