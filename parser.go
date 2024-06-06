@@ -52,8 +52,8 @@ func parseBytes(bytes *[]byte) *[]preToken {
 					token := &preToken{tokenType: slashTagStart, value: "</"}
 					tokens = append(tokens[:lastIndex], *token)
 				} else {
-					// Handle '/' in the middle of the token
-					// TODO: Add warning in error pool
+					buffer.clear()
+					buffer.append(byte('/'))
 				}
 				continue
 			}
@@ -69,7 +69,15 @@ func parseBytes(bytes *[]byte) *[]preToken {
 
 			if current == byte('>') {
 				isTag = false
-				token := &preToken{tokenType: tagEnd, value: ">"}
+				value := *(buffer.get())
+
+				var token *preToken
+
+				if len(value) == 1 && value[0] == byte('/') {
+					token = &preToken{tokenType: slashTagEnd, value: "/>"}
+				} else {
+					token = &preToken{tokenType: tagEnd, value: ">"}
+				}
 				tokens = append(tokens, *token)
 				continue
 			}
@@ -81,14 +89,14 @@ func parseBytes(bytes *[]byte) *[]preToken {
 
 				if last.tokenType == tagStart || last.tokenType == slashTagStart {
 					token = &preToken{tokenType: tagName, value: string(*value)}
-				} else if last.tokenType == tagName {
+				} else if last.tokenType == tagName || last.tokenType == propertyValue {
 					token = &preToken{tokenType: propertyName, value: string(*value)}
 				} else if last.tokenType == propertyName {
 					if isProperty {
 						token = &preToken{tokenType: propertyValue, value: string(*value)}
 						isProperty = false
 					} else {
-						token = &preToken{tokenType: propertyValue, value: string(*value)}
+						token = &preToken{tokenType: propertyName, value: string(*value)}
 					}
 				}
 				tokens = append(tokens, *token)
