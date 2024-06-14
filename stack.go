@@ -1,7 +1,7 @@
 package parseme
 
 type stackData interface {
-	preToken | Element
+	preToken | Element | *Element | ErrorData
 }
 
 type stack[T stackData] struct {
@@ -42,4 +42,3 @@ func (s *stack[T]) IsEmpty() bool {
 func (s *stack[T]) Size() int {
 	return len(s.values)
 }
-
