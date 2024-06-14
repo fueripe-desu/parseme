@@ -193,3 +193,25 @@ func (p *ErrorPool) ClearErrors() {
 func (p *ErrorPool) HasErrors() bool {
 	return !p.errorStack.IsEmpty()
 }
+
+func NewErrorData(
+	name string,
+	message string,
+	code string,
+	caller string,
+	module string,
+	fix string,
+	lineNumber int,
+	level ErrorLevel,
+) *errorData {
+	return &errorData{
+		name:       name,
+		message:    message,
+		code:       code,
+		caller:     caller,
+		module:     module,
+		fix:        fix,
+		lineNumber: lineNumber,
+		level:      level,
+	}
+}
