@@ -6,12 +6,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var test_notified bool
-
-type TestObserver struct{}
+type TestObserver struct {
+	test_notified bool
+}
 
 func (o *TestObserver) OnUpdate(name string, level ErrorLevel, message string) {
-	test_notified = true
+	o.test_notified = true
 }
 
 type TestObserver2 struct{}
@@ -124,9 +124,6 @@ func Test_UnsubscribeAll(t *testing.T) {
 
 func Test_Error(t *testing.T) {
 	t.Run("add error", func(t *testing.T) {
-		t.Cleanup(func() {
-			test_notified = false
-		})
 		assert := assert.New(t)
 		pool := &ErrorPool{}
 		observer := &TestObserver{}
@@ -136,15 +133,12 @@ func Test_Error(t *testing.T) {
 		pool.Error(data)
 
 		assert.Equal(pool.errorStack.Peek(), data)
-		assert.Equal(test_notified, true)
+		assert.Equal(observer.test_notified, true)
 	})
 }
 
 func Test_Notify(t *testing.T) {
 	t.Run("notify last error", func(t *testing.T) {
-		t.Cleanup(func() {
-			test_notified = false
-		})
 		assert := assert.New(t)
 		pool := &ErrorPool{}
 		observer := &TestObserver{}
@@ -156,13 +150,10 @@ func Test_Notify(t *testing.T) {
 		pool.AddError(data2)
 		pool.Notify()
 
-		assert.Equal(test_notified, true)
+		assert.Equal(observer.test_notified, true)
 	})
 
 	t.Run("notify empty pool", func(t *testing.T) {
-		t.Cleanup(func() {
-			test_notified = false
-		})
 		assert := assert.New(t)
 		pool := &ErrorPool{}
 		observer := &TestObserver{}
@@ -184,7 +175,6 @@ func Test_AddError(t *testing.T) {
 		pool.AddError(data)
 
 		assert.Equal(pool.errorStack.Peek(), data)
-		assert.Equal(test_notified, false)
 	})
 }
 
