@@ -130,7 +130,7 @@ func Test_Error(t *testing.T) {
 		data := ErrorData{name: "random-error", level: Warning, message: "Some message"}
 
 		pool.Subscribe(observer)
-		pool.Error(data)
+		pool.Error(data, nil)
 
 		assert.Equal(pool.errorStack.Peek(), data)
 		assert.Equal(observer.test_notified, true)
@@ -146,8 +146,8 @@ func Test_Notify(t *testing.T) {
 		data2 := ErrorData{name: "random-error2", level: Warning, message: "Some message2"}
 
 		pool.Subscribe(observer)
-		pool.AddError(data1)
-		pool.AddError(data2)
+		pool.AddError(data1, nil)
+		pool.AddError(data2, nil)
 		pool.Notify()
 
 		assert.Equal(observer.test_notified, true)
@@ -167,15 +167,55 @@ func Test_Notify(t *testing.T) {
 }
 
 func Test_AddError(t *testing.T) {
-	t.Run("add error", func(t *testing.T) {
-		assert := assert.New(t)
-		pool := &ErrorPool{}
-		data := ErrorData{name: "random-error", level: Warning, message: "Some message"}
+	testcases := []struct {
+		name         string
+		inputData    ErrorData
+		args         []string
+		expectedData ErrorData
+	}{
+		{
+			"add error",
+			ErrorData{name: "random-error", level: Warning, message: "Some message"},
+			nil,
+			ErrorData{name: "random-error", level: Warning, message: "Some message"},
+		},
+		{
+			"add masked error",
+			ErrorData{name: "random-error", level: Warning, message: "Name: %{0}, Age: %{1}"},
+			[]string{"John", "40"},
+			ErrorData{name: "random-error", level: Warning, message: "Name: John, Age: 40"},
+		},
 
-		pool.AddError(data)
+		{
+			"masked but nil args",
+			ErrorData{name: "masked error", level: Warning, message: "Name: %{0}"},
+			nil,
+			ErrorData{name: "masked error", level: Warning, message: "Name: %{0}"},
+		},
+		{
+			"masked but empty args",
+			ErrorData{name: "masked error", level: Warning, message: "Name: %{0}"},
+			[]string{},
+			ErrorData{name: "masked error", level: Warning, message: "Name: %{0}"},
+		},
+		{
+			"args but no mask",
+			ErrorData{name: "masked error", level: Warning, message: "Name: John"},
+			[]string{"Carl", "Paul"},
+			ErrorData{name: "masked error", level: Warning, message: "Name: John"},
+		},
+	}
 
-		assert.Equal(pool.errorStack.Peek(), data)
-	})
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert := assert.New(t)
+			pool := &ErrorPool{}
+			pool.AddError(tc.inputData, tc.args)
+
+			assert.Equal(pool.errorStack.Peek(), tc.expectedData)
+		})
+
+	}
 }
 
 func Test_CleanErrors(t *testing.T) {
@@ -185,8 +225,8 @@ func Test_CleanErrors(t *testing.T) {
 		data1 := ErrorData{name: "random-error", level: Warning, message: "Some message"}
 		data2 := ErrorData{name: "random-error2", level: Warning, message: "Some message2"}
 
-		pool.AddError(data1)
-		pool.AddError(data2)
+		pool.AddError(data1, nil)
+		pool.AddError(data2, nil)
 		pool.ClearErrors()
 
 		assert.Equal(pool.errorStack.IsEmpty(), true)
@@ -199,7 +239,7 @@ func Test_HasErrors(t *testing.T) {
 		pool := &ErrorPool{}
 		data := ErrorData{name: "random-error", level: Warning, message: "Some message"}
 
-		pool.AddError(data)
+		pool.AddError(data, nil)
 
 		assert.Equal(pool.HasErrors(), true)
 	})
@@ -209,5 +249,121 @@ func Test_HasErrors(t *testing.T) {
 		pool := &ErrorPool{}
 
 		assert.Equal(pool.HasErrors(), false)
+	})
+}
+
+func Test_consumeMask(t *testing.T) {
+	testcases := []struct {
+		name     string
+		input    string
+		expected int
+		endIndex int
+	}{
+		{
+			"normal mask",
+			"22}",
+			22,
+			2,
+		},
+		{
+			"empty mask",
+			"}",
+			-1,
+			0,
+		},
+		{
+			"alphabetic mask",
+			"something}",
+			-1,
+			9,
+		},
+		{
+			"alphanumeric mask",
+			"abc1def2}",
+			12,
+			8,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert := assert.New(t)
+			pool := &ErrorPool{}
+			bytes := []byte(tc.input)
+			index, argIndex := pool.consumeMask(0, &bytes)
+			assert.Equal(argIndex, tc.expected)
+			assert.Equal(index, tc.endIndex)
+		})
+	}
+}
+
+func Test_replaceMasks(t *testing.T) {
+	testcases := []struct {
+		name     string
+		input    string
+		args     []string
+		expected string
+	}{
+		{
+			"normal mask",
+			"Hello! My name is %{0}.",
+			[]string{"Paul"},
+			"Hello! My name is Paul.",
+		},
+		{
+			"empty mask",
+			"This %{}should not be replaced.",
+			[]string{"something"},
+			"This should not be replaced.",
+		},
+		{
+			"alphabetic mask",
+			"This %{something}should not be replaced.",
+			[]string{"Carl"},
+			"This should not be replaced.",
+		},
+		{
+			"alphanumeric mask",
+			"I'm %{abc2} years old!",
+			[]string{"18", "21", "34"},
+			"I'm 34 years old!",
+		},
+		{
+			"nil args",
+			"I'm %{0} years old!",
+			nil,
+			"I'm  years old!",
+		},
+		{
+			"empty args",
+			"I'm %{0} years old!",
+			[]string{},
+			"I'm  years old!",
+		},
+		{
+			"index out of range",
+			"I'm %{33} years old!",
+			[]string{"22"},
+			"I'm  years old!",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert := assert.New(t)
+			pool := &ErrorPool{}
+			newString := pool.replaceMasks(tc.input, tc.args)
+			assert.Equal(newString, tc.expected)
+		})
+	}
+}
+
+func Test_precompileError(t *testing.T) {
+	t.Run("precompile error", func(t *testing.T) {
+		assert := assert.New(t)
+		pool := &ErrorPool{}
+		data := ErrorData{name: "some error", level: Warning, message: "Name: %{0}, Age: %{1}"}
+		newData := pool.precompileError(data, []string{"Carl", "40"})
+		assert.Equal(newData.message, "Name: Carl, Age: 40")
 	})
 }
