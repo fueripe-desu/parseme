@@ -2,6 +2,7 @@ package parseme
 
 import (
 	"strconv"
+	"time"
 )
 
 type ErrorLevel int
@@ -14,19 +15,36 @@ const (
 	Trace
 )
 
-type ErrorData struct {
-	name    string
-	level   ErrorLevel
-	message string
+type errorData struct {
+	name       string
+	message    string
+	code       string
+	caller     string
+	module     string
+	fix        string
+	lineNumber int
+	level      ErrorLevel
+}
+
+type ErrorInfo struct {
+	Name       string
+	Message    string
+	Code       string
+	Caller     string
+	Module     string
+	Fix        string
+	LineNumber int
+	Level      ErrorLevel
+	Timestamp  time.Time
 }
 
 type ErrorPool struct {
 	observers  []ErrorObserver
-	errorStack stack[ErrorData]
+	errorStack stack[errorData]
 }
 
 type ErrorObserver interface {
-	OnUpdate(string, ErrorLevel, string)
+	OnUpdate(info ErrorInfo)
 }
 
 func (p *ErrorPool) Subscribe(observer ErrorObserver) error {
@@ -65,13 +83,13 @@ func (p *ErrorPool) UnsubscribeAll() {
 	p.observers = p.observers[:0]
 }
 
-func (p *ErrorPool) Error(data ErrorData, args []string) {
+func (p *ErrorPool) Error(data errorData, args []string) {
 	p.AddError(data, args)
 	p.Notify()
 }
 
-func (p *ErrorPool) AddError(data ErrorData, args []string) {
-	var finalData ErrorData
+func (p *ErrorPool) AddError(data errorData, args []string) {
+	var finalData errorData
 	if args != nil && len(args) > 0 {
 		finalData = p.precompileError(data, args)
 	} else {
@@ -81,9 +99,9 @@ func (p *ErrorPool) AddError(data ErrorData, args []string) {
 	p.errorStack.Push(finalData)
 }
 
-func (p *ErrorPool) precompileError(data ErrorData, args []string) ErrorData {
+func (p *ErrorPool) precompileError(data errorData, args []string) errorData {
 	newMsg := p.replaceMasks(data.message, args)
-	return ErrorData{name: data.name, level: data.level, message: newMsg}
+	return errorData{name: data.name, level: data.level, message: newMsg}
 }
 
 func (p *ErrorPool) replaceMasks(input string, args []string) string {
@@ -151,7 +169,18 @@ func (p *ErrorPool) Notify() error {
 	last := p.errorStack.Peek()
 
 	for _, o := range p.observers {
-		o.OnUpdate(last.name, last.level, last.message)
+		info := ErrorInfo{
+			last.name,
+			last.message,
+			last.code,
+			last.caller,
+			last.module,
+			last.fix,
+			last.lineNumber,
+			last.level,
+			time.Now(),
+		}
+		o.OnUpdate(info)
 	}
 
 	return nil
