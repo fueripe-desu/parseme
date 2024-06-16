@@ -20,6 +20,14 @@ func (o *TestObserver2) OnUpdate(info ErrorInfo) {
 	return
 }
 
+type TestFuncObserver struct {
+	observerFunc func(info ErrorInfo)
+}
+
+func (o *TestFuncObserver) OnUpdate(info ErrorInfo) {
+	o.observerFunc(info)
+}
+
 func Test_Subscribe(t *testing.T) {
 	t.Run("add observer", func(t *testing.T) {
 		assert := assert.New(t)
@@ -127,14 +135,90 @@ func Test_Error(t *testing.T) {
 		assert := assert.New(t)
 		pool := &ErrorPool{}
 		observer := &TestObserver{}
-		data := errorData{name: "random-error", level: Warning, message: "Some message"}
+		data := &errorData{name: "random-error", level: Warning, message: "Some message"}
 
 		pool.Subscribe(observer)
 		pool.Error(data, nil)
 
-		assert.Equal(pool.errorStack.Peek(), data)
+		assert.Equal(pool.errorStack.Peek(), *data)
 		assert.Equal(observer.test_notified, true)
 	})
+
+	t.Run("nil error data", func(t *testing.T) {
+		assert := assert.New(t)
+		pool := &ErrorPool{}
+		var resultInfo *ErrorInfo
+		observer := &TestFuncObserver{
+			observerFunc: func(info ErrorInfo) {
+				resultInfo = &info
+			},
+		}
+		var data *errorData = nil
+
+		pool.Subscribe(observer)
+		pool.Error(data, nil)
+
+		expectedInfo := ErrorInfo{
+			Name:           "Nil error data",
+			Message:        "Error data must not be nil.",
+			Code:           "ED1",
+			Module:         "Error Pool",
+			Fix:            "Try handling nil error data pointers before passing it to the function, or assing a new address to error data.",
+			CallerFuncName: "(*ErrorPool).Error",
+			CallerFilename: "error_pool.go",
+			CallerLine:     100,
+			ErrorFuncName:  "Test_Error.func2",
+			ErrorFilename:  "error_pool_test.go",
+			ErrorLine:      159,
+			ErrorSite:      "pool.Error(data, nil)",
+			Level:          Error,
+			Timestamp:      (*resultInfo).Timestamp,
+		}
+
+		assert.Equal(*resultInfo, expectedInfo)
+	})
+
+	t.Run("add non-recursive error", func(t *testing.T) {
+		assert := assert.New(t)
+		pool := &ErrorPool{}
+		var resultInfo *ErrorInfo
+		observer := &TestFuncObserver{
+			observerFunc: func(info ErrorInfo) {
+				resultInfo = &info
+			},
+		}
+		var data *errorData = NewErrorData(
+			"test error",
+			"This is a test message.",
+			"EC1",
+			"Test",
+			"Try fixing those stupid bugs.",
+			Error,
+		)
+
+		pool.Subscribe(observer)
+		pool.Error(data, nil)
+
+		expectedInfo := ErrorInfo{
+			Name:           "test error",
+			Message:        "This is a test message.",
+			Code:           "EC1",
+			Module:         "Test",
+			Fix:            "Try fixing those stupid bugs.",
+			CallerFuncName: "(*ErrorPool).Error",
+			CallerFilename: "error_pool.go",
+			CallerLine:     103,
+			ErrorFuncName:  "Test_Error.func3",
+			ErrorFilename:  "error_pool_test.go",
+			ErrorLine:      200,
+			ErrorSite:      "pool.Error(data, nil)",
+			Level:          Error,
+			Timestamp:      (*resultInfo).Timestamp,
+		}
+
+		assert.Equal(*resultInfo, expectedInfo)
+	})
+
 }
 
 func Test_Notify(t *testing.T) {
@@ -365,5 +449,66 @@ func Test_precompileError(t *testing.T) {
 		data := errorData{name: "some error", level: Warning, message: "Name: %{0}, Age: %{1}"}
 		newData := pool.precompileError(data, []string{"Carl", "40"})
 		assert.Equal(newData.message, "Name: Carl, Age: 40")
+	})
+}
+
+func Test_getStackIndex(t *testing.T) {
+	testcases := []struct {
+		name      string
+		recursive bool
+		caller    bool
+		expected  int
+	}{
+		{
+			"recursive with caller",
+			true,
+			true,
+			3,
+		},
+		{
+			"recursive without caller",
+			true,
+			false,
+			4,
+		},
+		{
+			"non recursive with caller",
+			false,
+			true,
+			2,
+		},
+		{
+			"non recursive without caller",
+			false,
+			false,
+			3,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert := assert.New(t)
+			pool := &ErrorPool{}
+			result := pool.getStackIndex(tc.recursive, tc.caller)
+			assert.Equal(result, tc.expected)
+		})
+	}
+}
+
+func Test_extractFuncName(t *testing.T) {
+	t.Run("full function name", func(t *testing.T) {
+		assert := assert.New(t)
+		pool := &ErrorPool{}
+		result := pool.extractFuncName("github.com/fueripe-desu/parseme.(*CustomError).CustomFunc")
+		assert.Equal(result, "(*CustomError).CustomFunc")
+	})
+}
+
+func Test_getLineContents(t *testing.T) {
+	t.Run("line contents", func(t *testing.T) {
+		assert := assert.New(t)
+		pool := &ErrorPool{}
+		result := pool.getLineContents("test_data/example1.html", 4)
+		assert.Equal(result, "<title>Example 1</title>")
 	})
 }
