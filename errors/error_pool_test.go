@@ -226,8 +226,8 @@ func Test_Notify(t *testing.T) {
 		assert := assert.New(t)
 		pool := &ErrorPool{}
 		observer := &TestObserver{}
-		data1 := errorData{name: "random-error", level: Warning, message: "Some message"}
-		data2 := errorData{name: "random-error2", level: Warning, message: "Some message2"}
+		data1 := &errorData{name: "random-error", level: Warning, message: "Some message"}
+		data2 := &errorData{name: "random-error2", level: Warning, message: "Some message2"}
 
 		pool.Subscribe(observer)
 		pool.AddError(data1, nil)
@@ -253,38 +253,38 @@ func Test_Notify(t *testing.T) {
 func Test_AddError(t *testing.T) {
 	testcases := []struct {
 		name         string
-		inputData    errorData
+		inputData    *errorData
 		args         []string
 		expectedData errorData
 	}{
 		{
 			"add error",
-			errorData{name: "random-error", level: Warning, message: "Some message"},
+			&errorData{name: "random-error", level: Warning, message: "Some message"},
 			nil,
 			errorData{name: "random-error", level: Warning, message: "Some message"},
 		},
 		{
 			"add masked error",
-			errorData{name: "random-error", level: Warning, message: "Name: %{0}, Age: %{1}"},
+			&errorData{name: "random-error", level: Warning, message: "Name: %{0}, Age: %{1}"},
 			[]string{"John", "40"},
 			errorData{name: "random-error", level: Warning, message: "Name: John, Age: 40"},
 		},
 
 		{
 			"masked but nil args",
-			errorData{name: "masked error", level: Warning, message: "Name: %{0}"},
+			&errorData{name: "masked error", level: Warning, message: "Name: %{0}"},
 			nil,
 			errorData{name: "masked error", level: Warning, message: "Name: %{0}"},
 		},
 		{
 			"masked but empty args",
-			errorData{name: "masked error", level: Warning, message: "Name: %{0}"},
+			&errorData{name: "masked error", level: Warning, message: "Name: %{0}"},
 			[]string{},
 			errorData{name: "masked error", level: Warning, message: "Name: %{0}"},
 		},
 		{
 			"args but no mask",
-			errorData{name: "masked error", level: Warning, message: "Name: John"},
+			&errorData{name: "masked error", level: Warning, message: "Name: John"},
 			[]string{"Carl", "Paul"},
 			errorData{name: "masked error", level: Warning, message: "Name: John"},
 		},
@@ -306,8 +306,8 @@ func Test_CleanErrors(t *testing.T) {
 	t.Run("clean errors", func(t *testing.T) {
 		assert := assert.New(t)
 		pool := &ErrorPool{}
-		data1 := errorData{name: "random-error", level: Warning, message: "Some message"}
-		data2 := errorData{name: "random-error2", level: Warning, message: "Some message2"}
+		data1 := &errorData{name: "random-error", level: Warning, message: "Some message"}
+		data2 := &errorData{name: "random-error2", level: Warning, message: "Some message2"}
 
 		pool.AddError(data1, nil)
 		pool.AddError(data2, nil)
@@ -321,7 +321,7 @@ func Test_HasErrors(t *testing.T) {
 	t.Run("not empty pool", func(t *testing.T) {
 		assert := assert.New(t)
 		pool := &ErrorPool{}
-		data := errorData{name: "random-error", level: Warning, message: "Some message"}
+		data := &errorData{name: "random-error", level: Warning, message: "Some message"}
 
 		pool.AddError(data, nil)
 
@@ -510,5 +510,17 @@ func Test_getLineContents(t *testing.T) {
 		pool := &ErrorPool{}
 		result := pool.getLineContents("../test_data/example1.html", 4)
 		assert.Equal(result, "<title>Example 1</title>")
+	})
+}
+
+func Test_GetErrorCount(t *testing.T) {
+	t.Run("error count", func(t *testing.T) {
+		assert := assert.New(t)
+		pool := &ErrorPool{}
+		pool.AddError(nilErrorDataError, nil)
+		pool.AddError(nilErrorDataError, nil)
+		pool.AddError(nilErrorDataError, nil)
+		result := pool.GetErrorCount()
+		assert.Equal(result, 3)
 	})
 }
