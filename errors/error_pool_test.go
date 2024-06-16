@@ -166,7 +166,7 @@ func Test_Error(t *testing.T) {
 			Fix:            "Try handling nil error data pointers before passing it to the function, or assing a new address to error data.",
 			CallerFuncName: "(*ErrorPool).Error",
 			CallerFilename: "error_pool.go",
-			CallerLine:     100,
+			CallerLine:     101,
 			ErrorFuncName:  "Test_Error.func2",
 			ErrorFilename:  "error_pool_test.go",
 			ErrorLine:      159,
@@ -207,7 +207,7 @@ func Test_Error(t *testing.T) {
 			Fix:            "Try fixing those stupid bugs.",
 			CallerFuncName: "(*ErrorPool).Error",
 			CallerFilename: "error_pool.go",
-			CallerLine:     103,
+			CallerLine:     104,
 			ErrorFuncName:  "Test_Error.func3",
 			ErrorFilename:  "error_pool_test.go",
 			ErrorLine:      200,
@@ -508,7 +508,7 @@ func Test_getLineContents(t *testing.T) {
 	t.Run("line contents", func(t *testing.T) {
 		assert := assert.New(t)
 		pool := &ErrorPool{}
-		result := pool.getLineContents("test_data/example1.html", 4)
+		result := pool.getLineContents("../test_data/example1.html", 4)
 		assert.Equal(result, "<title>Example 1</title>")
 	})
 }
