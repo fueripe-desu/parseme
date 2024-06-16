@@ -2,6 +2,7 @@ package errors
 
 import (
 	"bufio"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -222,7 +223,7 @@ func (p *ErrorPool) getErrorInfo(recursive bool, caller bool) (int, string, stri
 	funcName := p.extractFuncName(runtime.FuncForPC(pc).Name())
 
 	if !ok {
-		panic("Could not retrieve runtime caller.")
+		panic(errors.New("Could not retrieve runtime caller."))
 	}
 
 	return line, filepath.Base(file), funcName, p.getLineContents(file, line)
@@ -255,7 +256,7 @@ func (p *ErrorPool) getLineContents(filepath string, line int) string {
 	file, err := os.Open(filepath)
 
 	if err != nil {
-		panic("Could not open file.")
+		panic(errors.New("Could not open file."))
 	}
 
 	defer file.Close()
@@ -273,10 +274,10 @@ func (p *ErrorPool) getLineContents(filepath string, line int) string {
 	}
 
 	if scannerErr := scanner.Err(); scannerErr != nil {
-		panic("Scanner could not read the file.")
+		panic(errors.New("Scanner could not read the file."))
 	}
 
-	panic("File line does not exist.")
+	panic(errors.New("File line does not exist."))
 }
 
 func (p *ErrorPool) ClearErrors() {

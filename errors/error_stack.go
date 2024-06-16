@@ -1,5 +1,7 @@
 package errors
 
+import "errors"
+
 type errorStack struct {
 	values []errorData
 }
@@ -10,7 +12,7 @@ func (s *errorStack) push(value errorData) {
 
 func (s *errorStack) peek() errorData {
 	if s.isEmpty() {
-		panic("Cannot peek empty stack.")
+		panic(errors.New("Cannot peek empty stack."))
 	}
 
 	return s.values[s.size()-1]
