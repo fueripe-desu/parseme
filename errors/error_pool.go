@@ -100,17 +100,22 @@ func (p *ErrorPool) Error(data *errorData, args []string) {
 	if data == nil {
 		p.Error(nilErrorDataError, nil)
 	} else {
-		p.AddError(*data, args)
+		p.AddError(data, args)
 		p.Notify()
 	}
 }
 
-func (p *ErrorPool) AddError(data errorData, args []string) {
+func (p *ErrorPool) AddError(data *errorData, args []string) {
+	if data == nil {
+		p.Error(nilErrorDataError, nil)
+		return
+	}
+
 	var finalData errorData
 	if args != nil && len(args) > 0 {
-		finalData = p.precompileError(data, args)
+		finalData = p.precompileError(*data, args)
 	} else {
-		finalData = data
+		finalData = *data
 	}
 
 	p.errorStack.push(finalData)
