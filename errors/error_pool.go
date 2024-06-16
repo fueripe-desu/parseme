@@ -112,7 +112,7 @@ func (p *ErrorPool) AddError(data errorData, args []string) {
 		finalData = data
 	}
 
-	p.errorStack.Push(finalData)
+	p.errorStack.push(finalData)
 }
 
 func (p *ErrorPool) precompileError(data errorData, args []string) errorData {
@@ -182,7 +182,7 @@ func (p *ErrorPool) Notify() error {
 		return &NotifyObserverError{}
 	}
 
-	last := p.errorStack.Peek()
+	last := p.errorStack.peek()
 
 	recursive := false
 	if last.name == "Nil error data" {
@@ -280,15 +280,15 @@ func (p *ErrorPool) getLineContents(filepath string, line int) string {
 }
 
 func (p *ErrorPool) ClearErrors() {
-	p.errorStack.Clear()
+	p.errorStack.clear()
 }
 
 func (p *ErrorPool) HasErrors() bool {
-	return !p.errorStack.IsEmpty()
+	return !p.errorStack.isEmpty()
 }
 
 func (p *ErrorPool) GetErrorCount() int {
-	return p.errorStack.Size()
+	return p.errorStack.size()
 }
 
 func NewErrorData(
