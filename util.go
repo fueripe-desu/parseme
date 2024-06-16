@@ -2,8 +2,6 @@ package parseme
 
 import (
 	"regexp"
-	"strings"
-	"unicode"
 )
 
 func isValidIdentifier(value string) bool {
@@ -70,14 +68,4 @@ func removeQuotes(value string) string {
 	}
 
 	return value
-}
-
-func removeControlChars(input string) string {
-	var builder strings.Builder
-	for _, r := range input {
-		if !unicode.IsControl(r) {
-			builder.WriteRune(r)
-		}
-	}
-	return builder.String()
 }
