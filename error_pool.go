@@ -304,3 +304,96 @@ func NewErrorData(
 		level:   level,
 	}
 }
+
+func NewFatal(
+	name string,
+	message string,
+	code string,
+	module string,
+	fix string,
+) *errorData {
+	return NewErrorData(
+		name,
+		message,
+		code,
+		module,
+		fix,
+		Fatal,
+	)
+}
+
+func NewError(
+	name string,
+	message string,
+	code string,
+	module string,
+	fix string,
+) *errorData {
+	return NewErrorData(
+		name,
+		message,
+		code,
+		module,
+		fix,
+		Error,
+	)
+}
+
+func NewWarning(
+	name string,
+	message string,
+	code string,
+	module string,
+	fix string,
+) *errorData {
+	return NewErrorData(
+		name,
+		message,
+		code,
+		module,
+		fix,
+		Warning,
+	)
+}
+
+func NewInfo(
+	message string,
+	module string,
+) *errorData {
+	return NewErrorData(
+		"",
+		message,
+		"",
+		module,
+		"",
+		Info,
+	)
+}
+
+func NewDebug(
+	message string,
+	module string,
+) *errorData {
+	return NewErrorData(
+		"",
+		message,
+		"",
+		module,
+		"",
+		Debug,
+	)
+}
+
+func NewTrace(
+	message string,
+	module string,
+) *errorData {
+	return NewErrorData(
+		"",
+		message,
+		"",
+		module,
+		"",
+		Trace,
+	)
+}
