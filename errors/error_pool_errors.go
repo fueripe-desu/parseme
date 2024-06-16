@@ -1,4 +1,4 @@
-package parseme
+package errors
 
 type ObserverNotFoundError struct{}
 

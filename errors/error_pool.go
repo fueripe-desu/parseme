@@ -1,4 +1,4 @@
-package parseme
+package errors
 
 import (
 	"bufio"
@@ -52,7 +52,7 @@ type ErrorInfo struct {
 
 type ErrorPool struct {
 	observers  []ErrorObserver
-	errorStack stack[errorData]
+	errorStack errorStack
 }
 
 type ErrorObserver interface {

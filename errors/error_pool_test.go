@@ -1,4 +1,4 @@
-package parseme
+package errors
 
 import (
 	"testing"
