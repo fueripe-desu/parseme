@@ -287,6 +287,10 @@ func (p *ErrorPool) HasErrors() bool {
 	return !p.errorStack.IsEmpty()
 }
 
+func (p *ErrorPool) GetErrorCount() int {
+	return p.errorStack.Size()
+}
+
 func NewErrorData(
 	name string,
 	message string,
