@@ -140,7 +140,7 @@ func Test_Error(t *testing.T) {
 		pool.Subscribe(observer)
 		pool.Error(data, nil)
 
-		assert.Equal(pool.errorStack.Peek(), *data)
+		assert.Equal(pool.errorStack.peek(), *data)
 		assert.Equal(observer.test_notified, true)
 	})
 
@@ -296,7 +296,7 @@ func Test_AddError(t *testing.T) {
 			pool := &ErrorPool{}
 			pool.AddError(tc.inputData, tc.args)
 
-			assert.Equal(pool.errorStack.Peek(), tc.expectedData)
+			assert.Equal(pool.errorStack.peek(), tc.expectedData)
 		})
 
 	}
@@ -313,7 +313,7 @@ func Test_CleanErrors(t *testing.T) {
 		pool.AddError(data2, nil)
 		pool.ClearErrors()
 
-		assert.Equal(pool.errorStack.IsEmpty(), true)
+		assert.Equal(pool.errorStack.isEmpty(), true)
 	})
 }
 
