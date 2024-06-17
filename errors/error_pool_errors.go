@@ -24,5 +24,4 @@ var nilErrorDataError *errorData = NewErrorData(
 	"ED1",
 	"Error Pool",
 	"Try handling nil error data pointers before passing it to the function, or assing a new address to error data.",
-	Error,
 )

@@ -130,15 +130,15 @@ func Test_UnsubscribeAll(t *testing.T) {
 	})
 }
 
-func Test_Error(t *testing.T) {
+func Test_error(t *testing.T) {
 	t.Run("add error", func(t *testing.T) {
 		assert := assert.New(t)
 		pool := &ErrorPool{}
 		observer := &TestObserver{}
-		data := &errorData{name: "random-error", level: Warning, message: "Some message"}
+		data := &errorData{name: "random-error", message: "Some message"}
 
 		pool.Subscribe(observer)
-		pool.Error(data, nil)
+		pool.error(Warning, data, nil)
 
 		assert.Equal(pool.errorStack.peek(), *data)
 		assert.Equal(observer.test_notified, true)
@@ -156,7 +156,7 @@ func Test_Error(t *testing.T) {
 		var data *errorData = nil
 
 		pool.Subscribe(observer)
-		pool.Error(data, nil)
+		pool.error(Error, data, nil)
 
 		expectedInfo := ErrorInfo{
 			Name:           "Nil error data",
@@ -164,13 +164,13 @@ func Test_Error(t *testing.T) {
 			Code:           "ED1",
 			Module:         "Error Pool",
 			Fix:            "Try handling nil error data pointers before passing it to the function, or assing a new address to error data.",
-			CallerFuncName: "(*ErrorPool).Error",
+			CallerFuncName: "(*ErrorPool).error",
 			CallerFilename: "error_pool.go",
-			CallerLine:     101,
-			ErrorFuncName:  "Test_Error.func2",
+			CallerLine:     100,
+			ErrorFuncName:  "Test_error.func2",
 			ErrorFilename:  "error_pool_test.go",
 			ErrorLine:      159,
-			ErrorSite:      "pool.Error(data, nil)",
+			ErrorSite:      "pool.error(Error, data, nil)",
 			Level:          Error,
 			Timestamp:      (*resultInfo).Timestamp,
 		}
@@ -193,11 +193,10 @@ func Test_Error(t *testing.T) {
 			"EC1",
 			"Test",
 			"Try fixing those stupid bugs.",
-			Error,
 		)
 
 		pool.Subscribe(observer)
-		pool.Error(data, nil)
+		pool.error(Error, data, nil)
 
 		expectedInfo := ErrorInfo{
 			Name:           "test error",
@@ -205,13 +204,13 @@ func Test_Error(t *testing.T) {
 			Code:           "EC1",
 			Module:         "Test",
 			Fix:            "Try fixing those stupid bugs.",
-			CallerFuncName: "(*ErrorPool).Error",
+			CallerFuncName: "(*ErrorPool).error",
 			CallerFilename: "error_pool.go",
-			CallerLine:     104,
-			ErrorFuncName:  "Test_Error.func3",
+			CallerLine:     103,
+			ErrorFuncName:  "Test_error.func3",
 			ErrorFilename:  "error_pool_test.go",
-			ErrorLine:      200,
-			ErrorSite:      "pool.Error(data, nil)",
+			ErrorLine:      199,
+			ErrorSite:      "pool.error(Error, data, nil)",
 			Level:          Error,
 			Timestamp:      (*resultInfo).Timestamp,
 		}
@@ -221,18 +220,18 @@ func Test_Error(t *testing.T) {
 
 }
 
-func Test_Notify(t *testing.T) {
+func Test_notify(t *testing.T) {
 	t.Run("notify last error", func(t *testing.T) {
 		assert := assert.New(t)
 		pool := &ErrorPool{}
 		observer := &TestObserver{}
-		data1 := &errorData{name: "random-error", level: Warning, message: "Some message"}
-		data2 := &errorData{name: "random-error2", level: Warning, message: "Some message2"}
+		data1 := &errorData{name: "random-error", message: "Some message"}
+		data2 := &errorData{name: "random-error2", message: "Some message2"}
 
 		pool.Subscribe(observer)
-		pool.AddError(data1, nil)
-		pool.AddError(data2, nil)
-		pool.Notify()
+		pool.addError(data1, nil)
+		pool.addError(data2, nil)
+		pool.notify(Warning)
 
 		assert.Equal(observer.test_notified, true)
 	})
@@ -243,14 +242,14 @@ func Test_Notify(t *testing.T) {
 		observer := &TestObserver{}
 
 		pool.Subscribe(observer)
-		err := pool.Notify()
+		err := pool.notify(Error)
 
 		assert.Equal(err, &NotifyObserverError{})
 		assert.EqualError(err, (&NotifyObserverError{}).Error())
 	})
 }
 
-func Test_AddError(t *testing.T) {
+func Test_addError(t *testing.T) {
 	testcases := []struct {
 		name         string
 		inputData    *errorData
@@ -259,34 +258,34 @@ func Test_AddError(t *testing.T) {
 	}{
 		{
 			"add error",
-			&errorData{name: "random-error", level: Warning, message: "Some message"},
+			&errorData{name: "random-error", message: "Some message"},
 			nil,
-			errorData{name: "random-error", level: Warning, message: "Some message"},
+			errorData{name: "random-error", message: "Some message"},
 		},
 		{
 			"add masked error",
-			&errorData{name: "random-error", level: Warning, message: "Name: %{0}, Age: %{1}"},
+			&errorData{name: "random-error", message: "Name: %{0}, Age: %{1}"},
 			[]string{"John", "40"},
-			errorData{name: "random-error", level: Warning, message: "Name: John, Age: 40"},
+			errorData{name: "random-error", message: "Name: John, Age: 40"},
 		},
 
 		{
 			"masked but nil args",
-			&errorData{name: "masked error", level: Warning, message: "Name: %{0}"},
+			&errorData{name: "masked error", message: "Name: %{0}"},
 			nil,
-			errorData{name: "masked error", level: Warning, message: "Name: %{0}"},
+			errorData{name: "masked error", message: "Name: %{0}"},
 		},
 		{
 			"masked but empty args",
-			&errorData{name: "masked error", level: Warning, message: "Name: %{0}"},
+			&errorData{name: "masked error", message: "Name: %{0}"},
 			[]string{},
-			errorData{name: "masked error", level: Warning, message: "Name: %{0}"},
+			errorData{name: "masked error", message: "Name: %{0}"},
 		},
 		{
 			"args but no mask",
-			&errorData{name: "masked error", level: Warning, message: "Name: John"},
+			&errorData{name: "masked error", message: "Name: John"},
 			[]string{"Carl", "Paul"},
-			errorData{name: "masked error", level: Warning, message: "Name: John"},
+			errorData{name: "masked error", message: "Name: John"},
 		},
 	}
 
@@ -294,7 +293,7 @@ func Test_AddError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			assert := assert.New(t)
 			pool := &ErrorPool{}
-			pool.AddError(tc.inputData, tc.args)
+			pool.addError(tc.inputData, tc.args)
 
 			assert.Equal(pool.errorStack.peek(), tc.expectedData)
 		})
@@ -306,11 +305,11 @@ func Test_CleanErrors(t *testing.T) {
 	t.Run("clean errors", func(t *testing.T) {
 		assert := assert.New(t)
 		pool := &ErrorPool{}
-		data1 := &errorData{name: "random-error", level: Warning, message: "Some message"}
-		data2 := &errorData{name: "random-error2", level: Warning, message: "Some message2"}
+		data1 := &errorData{name: "random-error", message: "Some message"}
+		data2 := &errorData{name: "random-error2", message: "Some message2"}
 
-		pool.AddError(data1, nil)
-		pool.AddError(data2, nil)
+		pool.addError(data1, nil)
+		pool.addError(data2, nil)
 		pool.ClearErrors()
 
 		assert.Equal(pool.errorStack.isEmpty(), true)
@@ -321,9 +320,9 @@ func Test_HasErrors(t *testing.T) {
 	t.Run("not empty pool", func(t *testing.T) {
 		assert := assert.New(t)
 		pool := &ErrorPool{}
-		data := &errorData{name: "random-error", level: Warning, message: "Some message"}
+		data := &errorData{name: "random-error", message: "Some message"}
 
-		pool.AddError(data, nil)
+		pool.addError(data, nil)
 
 		assert.Equal(pool.HasErrors(), true)
 	})
@@ -446,7 +445,7 @@ func Test_precompileError(t *testing.T) {
 	t.Run("precompile error", func(t *testing.T) {
 		assert := assert.New(t)
 		pool := &ErrorPool{}
-		data := errorData{name: "some error", level: Warning, message: "Name: %{0}, Age: %{1}"}
+		data := errorData{name: "some error", message: "Name: %{0}, Age: %{1}"}
 		newData := pool.precompileError(data, []string{"Carl", "40"})
 		assert.Equal(newData.message, "Name: Carl, Age: 40")
 	})
@@ -517,9 +516,9 @@ func Test_GetErrorCount(t *testing.T) {
 	t.Run("error count", func(t *testing.T) {
 		assert := assert.New(t)
 		pool := &ErrorPool{}
-		pool.AddError(nilErrorDataError, nil)
-		pool.AddError(nilErrorDataError, nil)
-		pool.AddError(nilErrorDataError, nil)
+		pool.addError(nilErrorDataError, nil)
+		pool.addError(nilErrorDataError, nil)
+		pool.addError(nilErrorDataError, nil)
 		result := pool.GetErrorCount()
 		assert.Equal(result, 3)
 	})

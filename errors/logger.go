@@ -7,30 +7,30 @@ type logger struct {
 }
 
 func (l *logger) Fatal(data *errorData, args []string) {
-	l.pool.Error(data, args)
+	l.pool.error(Fatal, data, args)
 }
 
 func (l *logger) Error(data *errorData, args []string) {
-	l.pool.Error(data, args)
+	l.pool.error(Error, data, args)
 }
 
 func (l *logger) Warning(data *errorData, args []string) {
-	l.pool.Error(data, args)
+	l.pool.error(Warning, data, args)
 }
 
 func (l *logger) Info(content string, module string) {
-	errorData := &errorData{message: content, module: module, level: Info}
-	l.pool.Error(errorData, nil)
+	errorData := &errorData{message: content, module: module}
+	l.pool.error(Info, errorData, nil)
 }
 
 func (l *logger) Debug(content string, module string) {
-	errorData := &errorData{message: content, module: module, level: Debug}
-	l.pool.Error(errorData, nil)
+	errorData := &errorData{message: content, module: module}
+	l.pool.error(Debug, errorData, nil)
 }
 
 func (l *logger) Trace(content string, module string) {
-	errorData := &errorData{message: content, module: module, level: Trace}
-	l.pool.Error(errorData, nil)
+	errorData := &errorData{message: content, module: module}
+	l.pool.error(Trace, errorData, nil)
 }
 
 var loggerInstance *logger

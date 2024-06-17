@@ -28,7 +28,6 @@ type errorData struct {
 	code    string
 	module  string
 	fix     string
-	level   ErrorLevel
 }
 
 type ErrorInfo struct {
@@ -96,18 +95,18 @@ func (p *ErrorPool) UnsubscribeAll() {
 	p.observers = p.observers[:0]
 }
 
-func (p *ErrorPool) Error(data *errorData, args []string) {
+func (p *ErrorPool) error(level ErrorLevel, data *errorData, args []string) {
 	if data == nil {
-		p.Error(nilErrorDataError, nil)
+		p.error(Error, nilErrorDataError, nil)
 	} else {
-		p.AddError(data, args)
-		p.Notify()
+		p.addError(data, args)
+		p.notify(level)
 	}
 }
 
-func (p *ErrorPool) AddError(data *errorData, args []string) {
+func (p *ErrorPool) addError(data *errorData, args []string) {
 	if data == nil {
-		p.Error(nilErrorDataError, nil)
+		p.error(Error, nilErrorDataError, nil)
 		return
 	}
 
@@ -123,7 +122,7 @@ func (p *ErrorPool) AddError(data *errorData, args []string) {
 
 func (p *ErrorPool) precompileError(data errorData, args []string) errorData {
 	newMsg := p.replaceMasks(data.message, args)
-	return errorData{name: data.name, level: data.level, message: newMsg}
+	return errorData{name: data.name, message: newMsg}
 }
 
 func (p *ErrorPool) replaceMasks(input string, args []string) string {
@@ -183,7 +182,7 @@ func (p *ErrorPool) consumeMask(start int, chars *[]byte) (int, int) {
 	return startIndex, argsIndex
 }
 
-func (p *ErrorPool) Notify() error {
+func (p *ErrorPool) notify(level ErrorLevel) error {
 	if !p.HasErrors() {
 		return &NotifyObserverError{}
 	}
@@ -212,7 +211,7 @@ func (p *ErrorPool) Notify() error {
 			ErrorFilename:  errorFile,
 			ErrorLine:      errorLine,
 			ErrorSite:      errorSite,
-			Level:          last.level,
+			Level:          level,
 			Timestamp:      time.Now(),
 		}
 		o.OnUpdate(info)
@@ -303,7 +302,6 @@ func NewErrorData(
 	code string,
 	module string,
 	fix string,
-	level ErrorLevel,
 ) *errorData {
 	return &errorData{
 		name:    name,
@@ -311,99 +309,5 @@ func NewErrorData(
 		code:    code,
 		module:  module,
 		fix:     fix,
-		level:   level,
 	}
-}
-
-func NewFatal(
-	name string,
-	message string,
-	code string,
-	module string,
-	fix string,
-) *errorData {
-	return NewErrorData(
-		name,
-		message,
-		code,
-		module,
-		fix,
-		Fatal,
-	)
-}
-
-func NewError(
-	name string,
-	message string,
-	code string,
-	module string,
-	fix string,
-) *errorData {
-	return NewErrorData(
-		name,
-		message,
-		code,
-		module,
-		fix,
-		Error,
-	)
-}
-
-func NewWarning(
-	name string,
-	message string,
-	code string,
-	module string,
-	fix string,
-) *errorData {
-	return NewErrorData(
-		name,
-		message,
-		code,
-		module,
-		fix,
-		Warning,
-	)
-}
-
-func NewInfo(
-	message string,
-	module string,
-) *errorData {
-	return NewErrorData(
-		"",
-		message,
-		"",
-		module,
-		"",
-		Info,
-	)
-}
-
-func NewDebug(
-	message string,
-	module string,
-) *errorData {
-	return NewErrorData(
-		"",
-		message,
-		"",
-		module,
-		"",
-		Debug,
-	)
-}
-
-func NewTrace(
-	message string,
-	module string,
-) *errorData {
-	return NewErrorData(
-		"",
-		message,
-		"",
-		module,
-		"",
-		Trace,
-	)
 }
