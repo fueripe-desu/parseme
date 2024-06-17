@@ -41,7 +41,7 @@ func Test_GetLogger(t *testing.T) {
 
 		// Add Error
 		logger := GetLogger()
-		logger.pool.Error(nilErrorDataError, nil)
+		logger.pool.error(Error, nilErrorDataError, nil)
 
 		// Recover instance
 		logger2 := GetLogger()
