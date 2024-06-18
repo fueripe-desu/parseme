@@ -217,10 +217,10 @@ func Test_notify(t *testing.T) {
 		observer := &TestObserver{}
 
 		pool.Subscribe(observer)
-		err := pool.notify(Error)
 
-		assert.Equal(err, &NotifyObserverError{})
-		assert.EqualError(err, (&NotifyObserverError{}).Error())
+		assert.PanicsWithError("Cannot notify when there are no errors.", func() {
+			pool.notify(Error)
+		})
 	})
 }
 
