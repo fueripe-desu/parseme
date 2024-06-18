@@ -26,7 +26,6 @@ type errorData struct {
 	name    string
 	message string
 	code    string
-	module  string
 	fix     string
 }
 
@@ -95,13 +94,13 @@ func (p *ErrorPool) UnsubscribeAll() {
 	p.observers = p.observers[:0]
 }
 
-func (p *ErrorPool) error(level ErrorLevel, data *errorData, args []string) {
+func (p *ErrorPool) error(level ErrorLevel, module string, data *errorData, args []string) {
 	if data == nil {
 		panic(errors.New("Error data must not be nil."))
 	}
 
 	p.addError(data, args)
-	p.notify(level)
+	p.notify(level, module)
 
 	if level == Fatal {
 		os.Exit(-1)
@@ -125,7 +124,7 @@ func (p *ErrorPool) addError(data *errorData, args []string) {
 
 func (p *ErrorPool) precompileError(data errorData, args []string) errorData {
 	newMsg := p.replaceMasks(data.message, args)
-	return errorData{name: data.name, message: newMsg, code: data.code, module: data.module, fix: data.fix}
+	return errorData{name: data.name, message: newMsg, code: data.code, fix: data.fix}
 }
 
 func (p *ErrorPool) replaceMasks(input string, args []string) string {
@@ -185,7 +184,7 @@ func (p *ErrorPool) consumeMask(start int, chars *[]byte) (int, int) {
 	return startIndex, argsIndex
 }
 
-func (p *ErrorPool) notify(level ErrorLevel) error {
+func (p *ErrorPool) notify(level ErrorLevel, module string) error {
 	if !p.HasErrors() {
 		panic(errors.New("Cannot notify when there are no errors."))
 	}
@@ -193,6 +192,7 @@ func (p *ErrorPool) notify(level ErrorLevel) error {
 	last := p.errorStack.peek()
 
 	p.validateData(level, last)
+	p.checkModule(module)
 
 	callerLine, callerFile, callerFuncName, _ := p.getErrorInfo(true)
 	errorLine, errorFile, errorFuncName, errorSite := p.getErrorInfo(false)
@@ -202,7 +202,7 @@ func (p *ErrorPool) notify(level ErrorLevel) error {
 			Name:           last.name,
 			Message:        last.message,
 			Code:           last.code,
-			Module:         last.module,
+			Module:         module,
 			Fix:            last.fix,
 			CallerFuncName: callerFuncName,
 			CallerFilename: callerFile,
@@ -232,13 +232,11 @@ func (p *ErrorPool) validateComplete(data errorData) {
 	p.checkName(data.name)
 	p.checkMessage(data.message)
 	p.checkCode(data.code)
-	p.checkModule(data.module)
 	p.checkFix(data.fix)
 }
 
 func (p *ErrorPool) validateIncomplete(data errorData) {
 	p.checkMessage(data.message)
-	p.checkModule(data.module)
 }
 
 func (p *ErrorPool) checkName(input string) {
@@ -412,14 +410,12 @@ func NewErrorData(
 	name string,
 	message string,
 	code string,
-	module string,
 	fix string,
 ) *errorData {
 	return &errorData{
 		name:    name,
 		message: message,
 		code:    code,
-		module:  module,
 		fix:     fix,
 	}
 }

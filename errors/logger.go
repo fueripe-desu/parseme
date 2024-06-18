@@ -3,34 +3,32 @@ package errors
 import "errors"
 
 type logger struct {
-	pool *ErrorPool
+	pool   *ErrorPool
+	module string
 }
 
 func (l *logger) Fatal(data *errorData, args []string) {
-	l.pool.error(Fatal, data, args)
+	l.pool.error(Fatal, l.module, data, args)
 }
 
 func (l *logger) Error(data *errorData, args []string) {
-	l.pool.error(Error, data, args)
+	l.pool.error(Error, l.module, data, args)
 }
 
 func (l *logger) Warning(data *errorData, args []string) {
-	l.pool.error(Warning, data, args)
+	l.pool.error(Warning, l.module, data, args)
 }
 
 func (l *logger) Info(content string, module string) {
-	errorData := &errorData{message: content, module: module}
-	l.pool.error(Info, errorData, nil)
+	l.pool.error(Info, l.module, &errorData{message: content}, nil)
 }
 
 func (l *logger) Debug(content string, module string) {
-	errorData := &errorData{message: content, module: module}
-	l.pool.error(Debug, errorData, nil)
+	l.pool.error(Debug, l.module, &errorData{message: content}, nil)
 }
 
 func (l *logger) Trace(content string, module string) {
-	errorData := &errorData{message: content, module: module}
-	l.pool.error(Trace, errorData, nil)
+	l.pool.error(Trace, l.module, &errorData{message: content}, nil)
 }
 
 var loggerInstance *logger
@@ -60,4 +58,12 @@ func CloseLogger() {
 		loggerInstance.pool.ClearErrors()
 		loggerInstance.pool.UnsubscribeAll()
 	}
+}
+
+func SetLoggerModule(module string) {
+	if loggerInstance == nil {
+		panic("Cannot set module if logger is not initialized.")
+	}
+
+	loggerInstance.module = module
 }
