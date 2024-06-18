@@ -97,11 +97,11 @@ func (p *ErrorPool) UnsubscribeAll() {
 
 func (p *ErrorPool) error(level ErrorLevel, data *errorData, args []string) {
 	if data == nil {
-		p.error(Error, nilErrorDataError, nil)
-	} else {
-		p.addError(data, args)
-		p.notify(level)
+		panic(errors.New("Error data must not be nil."))
 	}
+
+	p.addError(data, args)
+	p.notify(level)
 
 	if level == Fatal {
 		os.Exit(-1)
@@ -110,8 +110,7 @@ func (p *ErrorPool) error(level ErrorLevel, data *errorData, args []string) {
 
 func (p *ErrorPool) addError(data *errorData, args []string) {
 	if data == nil {
-		p.error(Error, nilErrorDataError, nil)
-		return
+		panic(errors.New("Error data must not be nil."))
 	}
 
 	var finalData errorData
@@ -195,13 +194,8 @@ func (p *ErrorPool) notify(level ErrorLevel) error {
 
 	p.validateData(level, last)
 
-	recursive := false
-	if last.name == "Nil error data" {
-		recursive = true
-	}
-
-	callerLine, callerFile, callerFuncName, _ := p.getErrorInfo(recursive, true)
-	errorLine, errorFile, errorFuncName, errorSite := p.getErrorInfo(recursive, false)
+	callerLine, callerFile, callerFuncName, _ := p.getErrorInfo(true)
+	errorLine, errorFile, errorFuncName, errorSite := p.getErrorInfo(false)
 
 	for _, o := range p.observers {
 		info := ErrorInfo{
@@ -347,8 +341,8 @@ func (p *ErrorPool) checkFix(input string) {
 	}
 }
 
-func (p *ErrorPool) getErrorInfo(recursive bool, caller bool) (int, string, string, string) {
-	index := p.getStackIndex(recursive, caller)
+func (p *ErrorPool) getErrorInfo(caller bool) (int, string, string, string) {
+	index := p.getStackIndex(caller)
 
 	pc, file, line, ok := runtime.Caller(index)
 	funcName := p.extractFuncName(runtime.FuncForPC(pc).Name())
@@ -360,20 +354,11 @@ func (p *ErrorPool) getErrorInfo(recursive bool, caller bool) (int, string, stri
 	return line, filepath.Base(file), funcName, p.getLineContents(file, line)
 }
 
-func (p *ErrorPool) getStackIndex(recursive bool, caller bool) int {
-	if recursive {
-		if caller {
-			return 3
-		}
-
-		return 4
-	} else {
-		if caller {
-			return 2
-		}
-
-		return 3
+func (p *ErrorPool) getStackIndex(caller bool) int {
+	if caller {
+		return 2
 	}
+	return 3
 }
 
 func (p *ErrorPool) extractFuncName(fullName string) string {
