@@ -102,6 +102,10 @@ func (p *ErrorPool) error(level ErrorLevel, data *errorData, args []string) {
 		p.addError(data, args)
 		p.notify(level)
 	}
+
+	if level == Fatal {
+		os.Exit(-1)
+	}
 }
 
 func (p *ErrorPool) addError(data *errorData, args []string) {
@@ -122,7 +126,7 @@ func (p *ErrorPool) addError(data *errorData, args []string) {
 
 func (p *ErrorPool) precompileError(data errorData, args []string) errorData {
 	newMsg := p.replaceMasks(data.message, args)
-	return errorData{name: data.name, message: newMsg}
+	return errorData{name: data.name, message: newMsg, code: data.code, module: data.module, fix: data.fix}
 }
 
 func (p *ErrorPool) replaceMasks(input string, args []string) string {
@@ -189,6 +193,8 @@ func (p *ErrorPool) notify(level ErrorLevel) error {
 
 	last := p.errorStack.peek()
 
+	p.validateData(level, last)
+
 	recursive := false
 	if last.name == "Nil error data" {
 		recursive = true
@@ -218,6 +224,127 @@ func (p *ErrorPool) notify(level ErrorLevel) error {
 	}
 
 	return nil
+}
+
+func (p *ErrorPool) validateData(level ErrorLevel, data errorData) {
+	if level == Fatal || level == Error || level == Warning {
+		p.validateComplete(data)
+	} else {
+		p.validateIncomplete(data)
+	}
+}
+
+func (p *ErrorPool) validateComplete(data errorData) {
+	p.checkName(data.name)
+	p.checkMessage(data.message)
+	p.checkCode(data.code)
+	p.checkModule(data.module)
+	p.checkFix(data.fix)
+}
+
+func (p *ErrorPool) validateIncomplete(data errorData) {
+	p.checkMessage(data.message)
+	p.checkModule(data.module)
+}
+
+func (p *ErrorPool) checkName(input string) {
+	if isEmpty(input) {
+		panic(errors.New("Error name must not be empty."))
+	}
+
+	if !isAlphaSpace(input) {
+		panic(errors.New("Error name must only contain letters and spaces."))
+	}
+
+	if hasTrailingOrLeading(input) {
+		panic(errors.New("Error name must not contain leading or trailing spaces."))
+	}
+
+	if hasConsecutiveSpaces(input) {
+		panic(errors.New("Error name must not contain consecutive spaces."))
+	}
+
+	if !isSentence(input) {
+		panic(errors.New(
+			"Error name must follow the sentence case convention (first letter uppercase and all others lowercase).",
+		))
+	}
+}
+
+func (p *ErrorPool) checkMessage(input string) {
+	if isEmpty(input) {
+		panic(errors.New("Error message must not be empty."))
+	}
+
+	if !containsAlpha(input) {
+		panic(errors.New("Error message must contain at least one letter."))
+	}
+
+	if containsControl(input) {
+		panic(errors.New("Error message must not contain control characters."))
+	}
+
+	if !isCharUpper(input[0]) {
+		panic(errors.New("Error message must start with uppercase letter."))
+	}
+}
+
+func (p *ErrorPool) checkCode(input string) {
+	if isEmpty(input) {
+		panic(errors.New("Error code must not be empty."))
+	}
+
+	if len(input) != 3 {
+		panic(errors.New("Error code must have 3 characters of length."))
+	}
+
+	if !isAlphaNum(input) {
+		panic(errors.New("Error code must only contain uppercase letters and numbers."))
+	}
+
+	if containsLower(input) {
+		panic(errors.New("Error code must contain only uppercase letters."))
+	}
+}
+
+func (p *ErrorPool) checkModule(input string) {
+	if isEmpty(input) {
+		panic(errors.New("Error module must not be empty."))
+	}
+
+	if hasTrailingOrLeading(input) {
+		panic(errors.New("Error module must not contain leading or trailing spaces."))
+	}
+
+	if hasConsecutiveSpaces(input) {
+		panic(errors.New("Error module must not contain consecutive spaces."))
+	}
+
+	if !isAlphaSpace(input) {
+		panic(errors.New("Error module must only contain letters and spaces."))
+	}
+
+	if !isTitle(input) {
+		panic(errors.New("Error module must follow the title case convention (first letter of each word in uppercase separated by a space)."))
+	}
+}
+
+func (p *ErrorPool) checkFix(input string) {
+	if isEmpty(input) {
+		panic(errors.New("Error fix must not be empty."))
+	}
+
+	if !containsAlpha(input) {
+		panic(errors.New("Error fix must contain at least one letter."))
+	}
+
+	if containsControl(input) {
+		panic(errors.New("Error fix must not contain control characters."))
+	}
+
+	if !isCharUpper(input[0]) {
+		panic(errors.New("Error fix must start with uppercase letter."))
+	}
 }
 
 func (p *ErrorPool) getErrorInfo(recursive bool, caller bool) (int, string, string, string) {
