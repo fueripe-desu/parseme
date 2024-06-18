@@ -135,7 +135,7 @@ func Test_error(t *testing.T) {
 		assert := assert.New(t)
 		pool := &ErrorPool{}
 		observer := &TestObserver{}
-		data := &errorData{name: "random-error", message: "Some message"}
+		data := &errorData{name: "Fandom error", message: "Some message", code: "ABC", module: "Testing", fix: "Fix some bugs"}
 
 		pool.Subscribe(observer)
 		pool.error(Warning, data, nil)
@@ -188,7 +188,7 @@ func Test_error(t *testing.T) {
 			},
 		}
 		var data *errorData = NewErrorData(
-			"test error",
+			"Test error",
 			"This is a test message.",
 			"EC1",
 			"Test",
@@ -199,7 +199,7 @@ func Test_error(t *testing.T) {
 		pool.error(Error, data, nil)
 
 		expectedInfo := ErrorInfo{
-			Name:           "test error",
+			Name:           "Test error",
 			Message:        "This is a test message.",
 			Code:           "EC1",
 			Module:         "Test",
@@ -217,7 +217,6 @@ func Test_error(t *testing.T) {
 
 		assert.Equal(*resultInfo, expectedInfo)
 	})
-
 }
 
 func Test_notify(t *testing.T) {
@@ -225,8 +224,8 @@ func Test_notify(t *testing.T) {
 		assert := assert.New(t)
 		pool := &ErrorPool{}
 		observer := &TestObserver{}
-		data1 := &errorData{name: "random-error", message: "Some message"}
-		data2 := &errorData{name: "random-error2", message: "Some message2"}
+		data1 := &errorData{name: "Random error", message: "Some message", code: "ABC", module: "Testing", fix: "Some fix"}
+		data2 := &errorData{name: "Random error two", message: "Some message2", code: "ABC", module: "Testing", fix: "Some fix"}
 
 		pool.Subscribe(observer)
 		pool.addError(data1, nil)
@@ -258,34 +257,34 @@ func Test_addError(t *testing.T) {
 	}{
 		{
 			"add error",
-			&errorData{name: "random-error", message: "Some message"},
+			&errorData{name: "Random error", message: "Some message"},
 			nil,
-			errorData{name: "random-error", message: "Some message"},
+			errorData{name: "Random error", message: "Some message"},
 		},
 		{
 			"add masked error",
-			&errorData{name: "random-error", message: "Name: %{0}, Age: %{1}"},
+			&errorData{name: "Random error", message: "Name: %{0}, Age: %{1}"},
 			[]string{"John", "40"},
-			errorData{name: "random-error", message: "Name: John, Age: 40"},
+			errorData{name: "Random error", message: "Name: John, Age: 40"},
 		},
 
 		{
 			"masked but nil args",
-			&errorData{name: "masked error", message: "Name: %{0}"},
+			&errorData{name: "Masked error", message: "Name: %{0}"},
 			nil,
-			errorData{name: "masked error", message: "Name: %{0}"},
+			errorData{name: "Masked error", message: "Name: %{0}"},
 		},
 		{
 			"masked but empty args",
-			&errorData{name: "masked error", message: "Name: %{0}"},
+			&errorData{name: "Masked error", message: "Name: %{0}"},
 			[]string{},
-			errorData{name: "masked error", message: "Name: %{0}"},
+			errorData{name: "Masked error", message: "Name: %{0}"},
 		},
 		{
 			"args but no mask",
-			&errorData{name: "masked error", message: "Name: John"},
+			&errorData{name: "Masked error", message: "Name: John"},
 			[]string{"Carl", "Paul"},
-			errorData{name: "masked error", message: "Name: John"},
+			errorData{name: "Masked error", message: "Name: John"},
 		},
 	}
 
@@ -522,4 +521,565 @@ func Test_GetErrorCount(t *testing.T) {
 		result := pool.GetErrorCount()
 		assert.Equal(result, 3)
 	})
+}
+
+func Test_checkName(t *testing.T) {
+	testcases := []struct {
+		name         string
+		input        string
+		shouldPanic  bool
+		panicMessage string
+	}{
+		{
+			"valid name",
+			"Not found error",
+			false,
+			"",
+		},
+		{
+			"empty name",
+			"",
+			true,
+			"Error name must not be empty.",
+		},
+		{
+			"invalid name chars",
+			"This 1s an inv@lid name",
+			true,
+			"Error name must only contain letters and spaces.",
+		},
+		{
+			"name with leading spaces",
+			"      This is an invalid name",
+			true,
+			"Error name must not contain leading or trailing spaces.",
+		},
+		{
+			"name with trailing spaces",
+			"This is an invalid name     ",
+			true,
+			"Error name must not contain leading or trailing spaces.",
+		},
+		{
+			"name with consecutive spaces",
+			"This is      an invalid name",
+			true,
+			"Error name must not contain consecutive spaces.",
+		},
+		{
+			"no sentence case",
+			"this is an invalid name",
+			true,
+			"Error name must follow the sentence case convention (first letter uppercase and all others lowercase).",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert := assert.New(t)
+			pool := &ErrorPool{}
+
+			if tc.shouldPanic {
+				assert.PanicsWithError(tc.panicMessage, func() {
+					pool.checkName(tc.input)
+				})
+			} else {
+				pool.checkName(tc.input)
+			}
+		})
+	}
+}
+
+func Test_checkMessage(t *testing.T) {
+	testcases := []struct {
+		name         string
+		input        string
+		shouldPanic  bool
+		panicMessage string
+	}{
+		{
+			"valid message",
+			"This is a valid error message.",
+			false,
+			"",
+		},
+		{
+			"empty message",
+			"",
+			true,
+			"Error message must not be empty.",
+		},
+		{
+			"without letters",
+			"@!#@#",
+			true,
+			"Error message must contain at least one letter.",
+		},
+		{
+			"message with control chars",
+			"This is an invalid message.\n",
+			true,
+			"Error message must not contain control characters.",
+		},
+		{
+			"first char not capitalized",
+			"this is an invalid message.",
+			true,
+			"Error message must start with uppercase letter.",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert := assert.New(t)
+			pool := &ErrorPool{}
+
+			if tc.shouldPanic {
+				assert.PanicsWithError(tc.panicMessage, func() {
+					pool.checkMessage(tc.input)
+				})
+			} else {
+				pool.checkMessage(tc.input)
+			}
+		})
+	}
+}
+
+func Test_checkCode(t *testing.T) {
+	testcases := []struct {
+		name         string
+		input        string
+		shouldPanic  bool
+		panicMessage string
+	}{
+		{
+			"valid code",
+			"C3A",
+			false,
+			"",
+		},
+		{
+			"empty code",
+			"",
+			true,
+			"Error code must not be empty.",
+		},
+		{
+			"code with more than 3 chars",
+			"ABCD",
+			true,
+			"Error code must have 3 characters of length.",
+		},
+		{
+			"code with less than 3 chars",
+			"AB",
+			true,
+			"Error code must have 3 characters of length.",
+		},
+		{
+			"code with non alphanum chars",
+			"A#2",
+			true,
+			"Error code must only contain uppercase letters and numbers.",
+		},
+		{
+			"code not capitalized",
+			"c3A",
+			true,
+			"Error code must contain only uppercase letters.",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert := assert.New(t)
+			pool := &ErrorPool{}
+
+			if tc.shouldPanic {
+				assert.PanicsWithError(tc.panicMessage, func() {
+					pool.checkCode(tc.input)
+				})
+			} else {
+				pool.checkCode(tc.input)
+			}
+		})
+	}
+}
+
+func Test_checkModule(t *testing.T) {
+	testcases := []struct {
+		name         string
+		input        string
+		shouldPanic  bool
+		panicMessage string
+	}{
+		{
+			"valid module",
+			"Not Found Error",
+			false,
+			"",
+		},
+		{
+			"empty module",
+			"",
+			true,
+			"Error module must not be empty.",
+		},
+		{
+			"invalid module chars",
+			"This 1s An Inv@lid Module",
+			true,
+			"Error module must only contain letters and spaces.",
+		},
+		{
+			"module with leading spaces",
+			"      This Is An Invalid Module",
+			true,
+			"Error module must not contain leading or trailing spaces.",
+		},
+		{
+			"module with trailing spaces",
+			"This Is An Invalid Module     ",
+			true,
+			"Error module must not contain leading or trailing spaces.",
+		},
+		{
+			"module with consecutive spaces",
+			"This Is      An Invalid Module",
+			true,
+			"Error module must not contain consecutive spaces.",
+		},
+		{
+			"no title case",
+			"this is an invalid Module",
+			true,
+			"Error module must follow the title case convention (first letter of each word in uppercase separated by a space).",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert := assert.New(t)
+			pool := &ErrorPool{}
+
+			if tc.shouldPanic {
+				assert.PanicsWithError(tc.panicMessage, func() {
+					pool.checkModule(tc.input)
+				})
+			} else {
+				pool.checkModule(tc.input)
+			}
+		})
+	}
+}
+
+func Test_checkFix(t *testing.T) {
+	testcases := []struct {
+		name         string
+		input        string
+		shouldPanic  bool
+		panicMessage string
+	}{
+		{
+			"valid fix",
+			"This is a valid error fix.",
+			false,
+			"",
+		},
+		{
+			"empty fix",
+			"",
+			true,
+			"Error fix must not be empty.",
+		},
+		{
+			"without letters",
+			"@!#@#",
+			true,
+			"Error fix must contain at least one letter.",
+		},
+		{
+			"fix with control chars",
+			"This is an invalid fix.\n",
+			true,
+			"Error fix must not contain control characters.",
+		},
+		{
+			"first char not capitalized",
+			"this is an invalid fix.",
+			true,
+			"Error fix must start with uppercase letter.",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert := assert.New(t)
+			pool := &ErrorPool{}
+
+			if tc.shouldPanic {
+				assert.PanicsWithError(tc.panicMessage, func() {
+					pool.checkFix(tc.input)
+				})
+			} else {
+				pool.checkFix(tc.input)
+			}
+		})
+	}
+}
+
+func Test_validComplete(t *testing.T) {
+	testcases := []struct {
+		name         string
+		input        errorData
+		shouldPanic  bool
+		panicMessage string
+	}{
+		{
+			"valid error",
+			errorData{
+				name:    "Not found error",
+				message: "Could not find object.",
+				code:    "ABC",
+				module:  "Testing",
+				fix:     "Try searching for the object.",
+			},
+			false,
+			"",
+		},
+		{
+			"invalid name",
+			errorData{
+				name:    "",
+				message: "Could not find object.",
+				code:    "ABC",
+				module:  "Testing",
+				fix:     "Try searching for the object.",
+			},
+			true,
+			"Error name must not be empty.",
+		},
+		{
+			"invalid message",
+			errorData{
+				name:    "Not found error",
+				message: "",
+				code:    "ABC",
+				module:  "Testing",
+				fix:     "Try searching for the object.",
+			},
+			true,
+			"Error message must not be empty.",
+		},
+		{
+			"invalid code",
+			errorData{
+				name:    "Not found error",
+				message: "Could not find object.",
+				code:    "",
+				module:  "Testing",
+				fix:     "Try searching for the object.",
+			},
+			true,
+			"Error code must not be empty.",
+		},
+		{
+			"invalid module",
+			errorData{
+				name:    "Not found error",
+				message: "Could not find object.",
+				code:    "ABC",
+				module:  "",
+				fix:     "Try searching for the object.",
+			},
+			true,
+			"Error module must not be empty.",
+		},
+		{
+			"invalid fix",
+			errorData{
+				name:    "Not found error",
+				message: "Could not find object.",
+				code:    "ABC",
+				module:  "Testing",
+				fix:     "",
+			},
+			true,
+			"Error fix must not be empty.",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert := assert.New(t)
+			pool := &ErrorPool{}
+
+			if tc.shouldPanic {
+				assert.PanicsWithError(tc.panicMessage, func() {
+					pool.validateComplete(tc.input)
+				})
+			} else {
+				pool.validateComplete(tc.input)
+			}
+		})
+	}
+}
+
+func Test_validateIncomplete(t *testing.T) {
+	testcases := []struct {
+		name         string
+		input        errorData
+		shouldPanic  bool
+		panicMessage string
+	}{
+		{
+			"valid error",
+			errorData{
+				name:    "Not found error",
+				message: "Could not find object.",
+				code:    "ABC",
+				module:  "Testing",
+				fix:     "Try searching for the object.",
+			},
+			false,
+			"",
+		},
+		{
+			"invalid name",
+			errorData{
+				name:    "",
+				message: "Could not find object.",
+				code:    "ABC",
+				module:  "Testing",
+				fix:     "Try searching for the object.",
+			},
+			false,
+			"",
+		},
+		{
+			"invalid message",
+			errorData{
+				name:    "Not found error",
+				message: "",
+				code:    "ABC",
+				module:  "Testing",
+				fix:     "Try searching for the object.",
+			},
+			true,
+			"Error message must not be empty.",
+		},
+		{
+			"invalid code",
+			errorData{
+				name:    "Not found error",
+				message: "Could not find object.",
+				code:    "",
+				module:  "Testing",
+				fix:     "Try searching for the object.",
+			},
+			false,
+			"",
+		},
+		{
+			"invalid module",
+			errorData{
+				name:    "Not found error",
+				message: "Could not find object.",
+				code:    "ABC",
+				module:  "",
+				fix:     "Try searching for the object.",
+			},
+			true,
+			"Error module must not be empty.",
+		},
+		{
+			"invalid fix",
+			errorData{
+				name:    "Not found error",
+				message: "Could not find object.",
+				code:    "ABC",
+				module:  "Testing",
+				fix:     "",
+			},
+			false,
+			"",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert := assert.New(t)
+			pool := &ErrorPool{}
+
+			if tc.shouldPanic {
+				assert.PanicsWithError(tc.panicMessage, func() {
+					pool.validateIncomplete(tc.input)
+				})
+			} else {
+				pool.validateIncomplete(tc.input)
+			}
+		})
+	}
+}
+
+func Test_validateData(t *testing.T) {
+	testcases := []struct {
+		name     string
+		complete bool
+		level    ErrorLevel
+	}{
+		{
+			"validate fatal",
+			true,
+			Fatal,
+		},
+		{
+			"validate error",
+			true,
+			Error,
+		},
+		{
+			"validate warning",
+			true,
+			Warning,
+		},
+		{
+			"validate info",
+			false,
+			Info,
+		},
+		{
+			"validate debug",
+			false,
+			Debug,
+		},
+		{
+			"validate trace",
+			false,
+			Trace,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			pool := &ErrorPool{}
+			complete := errorData{
+				name:    "Not found error",
+				message: "Could not find object.",
+				code:    "ABC",
+				module:  "Testing",
+				fix:     "Try searching for the object.",
+			}
+			incomplete := errorData{
+				message: "Could not find object.",
+				module:  "Testing",
+			}
+
+			if tc.complete {
+				pool.validateData(tc.level, complete)
+			} else {
+				pool.validateData(tc.level, incomplete)
+			}
+		})
+	}
 }
