@@ -62,7 +62,7 @@ func CloseLogger() {
 
 func SetLoggerModule(module string) {
 	if loggerInstance == nil {
-		panic("Cannot set module if logger is not initialized.")
+		panic(errors.New("Cannot set module if logger is not initialized."))
 	}
 
 	loggerInstance.module = module
