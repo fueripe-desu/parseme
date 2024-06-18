@@ -147,35 +147,11 @@ func Test_error(t *testing.T) {
 	t.Run("nil error data", func(t *testing.T) {
 		assert := assert.New(t)
 		pool := &ErrorPool{}
-		var resultInfo *ErrorInfo
-		observer := &TestFuncObserver{
-			observerFunc: func(info ErrorInfo) {
-				resultInfo = &info
-			},
-		}
 		var data *errorData = nil
 
-		pool.Subscribe(observer)
-		pool.error(Error, data, nil)
-
-		expectedInfo := ErrorInfo{
-			Name:           "Nil error data",
-			Message:        "Error data must not be nil.",
-			Code:           "ED1",
-			Module:         "Error Pool",
-			Fix:            "Try handling nil error data pointers before passing it to the function, or assing a new address to error data.",
-			CallerFuncName: "(*ErrorPool).error",
-			CallerFilename: "error_pool.go",
-			CallerLine:     100,
-			ErrorFuncName:  "Test_error.func2",
-			ErrorFilename:  "error_pool_test.go",
-			ErrorLine:      159,
-			ErrorSite:      "pool.error(Error, data, nil)",
-			Level:          Error,
-			Timestamp:      (*resultInfo).Timestamp,
-		}
-
-		assert.Equal(*resultInfo, expectedInfo)
+		assert.PanicsWithError("Error data must not be nil.", func() {
+			pool.error(Error, data, nil)
+		})
 	})
 
 	t.Run("add non-recursive error", func(t *testing.T) {
@@ -206,10 +182,10 @@ func Test_error(t *testing.T) {
 			Fix:            "Try fixing those stupid bugs.",
 			CallerFuncName: "(*ErrorPool).error",
 			CallerFilename: "error_pool.go",
-			CallerLine:     103,
+			CallerLine:     104,
 			ErrorFuncName:  "Test_error.func3",
 			ErrorFilename:  "error_pool_test.go",
-			ErrorLine:      199,
+			ErrorLine:      175,
 			ErrorSite:      "pool.error(Error, data, nil)",
 			Level:          Error,
 			Timestamp:      (*resultInfo).Timestamp,
@@ -452,32 +428,17 @@ func Test_precompileError(t *testing.T) {
 
 func Test_getStackIndex(t *testing.T) {
 	testcases := []struct {
-		name      string
-		recursive bool
-		caller    bool
-		expected  int
+		name     string
+		caller   bool
+		expected int
 	}{
 		{
-			"recursive with caller",
-			true,
-			true,
-			3,
-		},
-		{
-			"recursive without caller",
-			true,
-			false,
-			4,
-		},
-		{
-			"non recursive with caller",
-			false,
+			"with caller",
 			true,
 			2,
 		},
 		{
-			"non recursive without caller",
-			false,
+			"without caller",
 			false,
 			3,
 		},
@@ -487,7 +448,7 @@ func Test_getStackIndex(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			assert := assert.New(t)
 			pool := &ErrorPool{}
-			result := pool.getStackIndex(tc.recursive, tc.caller)
+			result := pool.getStackIndex(tc.caller)
 			assert.Equal(result, tc.expected)
 		})
 	}
@@ -515,9 +476,16 @@ func Test_GetErrorCount(t *testing.T) {
 	t.Run("error count", func(t *testing.T) {
 		assert := assert.New(t)
 		pool := &ErrorPool{}
-		pool.addError(nilErrorDataError, nil)
-		pool.addError(nilErrorDataError, nil)
-		pool.addError(nilErrorDataError, nil)
+		data := &errorData{
+			name:    "Not found error",
+			message: "Could not find object.",
+			code:    "ABC",
+			module:  "Testing",
+			fix:     "Try searching for the object.",
+		}
+		pool.addError(data, nil)
+		pool.addError(data, nil)
+		pool.addError(data, nil)
 		result := pool.GetErrorCount()
 		assert.Equal(result, 3)
 	})

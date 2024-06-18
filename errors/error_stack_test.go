@@ -10,18 +10,32 @@ func Test_push(t *testing.T) {
 	t.Run("add one element", func(t *testing.T) {
 		assert := assert.New(t)
 		stack := errorStack{}
-		stack.push(*nilErrorDataError)
-		assert.Equal(stack.values, []errorData{*nilErrorDataError})
+		data := errorData{
+			name:    "Not found error",
+			message: "Could not find object.",
+			code:    "ABC",
+			module:  "Testing",
+			fix:     "Try searching for the object.",
+		}
+		stack.push(data)
+		assert.Equal(stack.values, []errorData{data})
 	})
 
 	t.Run("add more than one element", func(t *testing.T) {
 		assert := assert.New(t)
 		stack := errorStack{}
-		stack.push(*nilErrorDataError)
-		stack.push(*nilErrorDataError)
-		stack.push(*nilErrorDataError)
+		data := errorData{
+			name:    "Not found error",
+			message: "Could not find object.",
+			code:    "ABC",
+			module:  "Testing",
+			fix:     "Try searching for the object.",
+		}
+		stack.push(data)
+		stack.push(data)
+		stack.push(data)
 
-		expected := []errorData{*nilErrorDataError, *nilErrorDataError, *nilErrorDataError}
+		expected := []errorData{data, data, data}
 
 		assert.Equal(stack.values, expected)
 	})
@@ -31,9 +45,16 @@ func Test_peek(t *testing.T) {
 	t.Run("peek last element", func(t *testing.T) {
 		assert := assert.New(t)
 		stack := errorStack{}
-		stack.push(*nilErrorDataError)
+		data := errorData{
+			name:    "Not found error",
+			message: "Could not find object.",
+			code:    "ABC",
+			module:  "Testing",
+			fix:     "Try searching for the object.",
+		}
+		stack.push(data)
 		result := stack.peek()
-		assert.Equal(result, *nilErrorDataError)
+		assert.Equal(result, data)
 	})
 
 	t.Run("peek empty stack", func(t *testing.T) {
@@ -49,7 +70,14 @@ func Test_isEmpty(t *testing.T) {
 	t.Run("non empty stack", func(t *testing.T) {
 		assert := assert.New(t)
 		stack := errorStack{}
-		stack.push(*nilErrorDataError)
+		data := errorData{
+			name:    "Not found error",
+			message: "Could not find object.",
+			code:    "ABC",
+			module:  "Testing",
+			fix:     "Try searching for the object.",
+		}
+		stack.push(data)
 		result := stack.isEmpty()
 		assert.Equal(result, false)
 	})
@@ -66,9 +94,16 @@ func Test_size(t *testing.T) {
 	t.Run("non empty stack", func(t *testing.T) {
 		assert := assert.New(t)
 		stack := errorStack{}
-		stack.push(*nilErrorDataError)
-		stack.push(*nilErrorDataError)
-		stack.push(*nilErrorDataError)
+		data := errorData{
+			name:    "Not found error",
+			message: "Could not find object.",
+			code:    "ABC",
+			module:  "Testing",
+			fix:     "Try searching for the object.",
+		}
+		stack.push(data)
+		stack.push(data)
+		stack.push(data)
 
 		result := stack.size()
 		assert.Equal(result, 3)
@@ -86,9 +121,16 @@ func Test_clear(t *testing.T) {
 	t.Run("non empty stack", func(t *testing.T) {
 		assert := assert.New(t)
 		stack := errorStack{}
-		stack.push(*nilErrorDataError)
-		stack.push(*nilErrorDataError)
-		stack.push(*nilErrorDataError)
+		data := errorData{
+			name:    "Not found error",
+			message: "Could not find object.",
+			code:    "ABC",
+			module:  "Testing",
+			fix:     "Try searching for the object.",
+		}
+		stack.push(data)
+		stack.push(data)
+		stack.push(data)
 
 		assert.Equal(stack.size(), 3)
 		stack.clear()

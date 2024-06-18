@@ -41,13 +41,20 @@ func Test_GetLogger(t *testing.T) {
 		})
 		assert := assert.New(t)
 		pool := &ErrorPool{}
+		data := &errorData{
+			name:    "Not found error",
+			message: "Could not find object.",
+			code:    "ABC",
+			module:  "Testing",
+			fix:     "Try searching for the object.",
+		}
 
 		// Init logger
 		InitLogger(pool)
 
 		// Add Error
 		logger := GetLogger()
-		logger.pool.error(Error, nilErrorDataError, nil)
+		logger.pool.error(Error, data, nil)
 
 		// Recover instance
 		logger2 := GetLogger()
