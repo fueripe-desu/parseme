@@ -56,6 +56,8 @@ func IsLoggerInitialized() bool {
 }
 
 func CloseLogger() {
-	loggerInstance.pool.ClearErrors()
-	loggerInstance.pool.UnsubscribeAll()
+	if loggerInstance != nil {
+		loggerInstance.pool.ClearErrors()
+		loggerInstance.pool.UnsubscribeAll()
+	}
 }
