@@ -11,9 +11,3 @@ type ObserverDuplicateError struct{}
 func (e *ObserverDuplicateError) Error() string {
 	return "Observer already exists."
 }
-
-type NotifyObserverError struct{}
-
-func (e *NotifyObserverError) Error() string {
-	return "Cannot notify when there are no errors."
-}

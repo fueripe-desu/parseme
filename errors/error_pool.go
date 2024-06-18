@@ -187,7 +187,7 @@ func (p *ErrorPool) consumeMask(start int, chars *[]byte) (int, int) {
 
 func (p *ErrorPool) notify(level ErrorLevel) error {
 	if !p.HasErrors() {
-		return &NotifyObserverError{}
+		panic(errors.New("Cannot notify when there are no errors."))
 	}
 
 	last := p.errorStack.peek()
