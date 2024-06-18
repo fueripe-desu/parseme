@@ -14,7 +14,6 @@ func Test_push(t *testing.T) {
 			name:    "Not found error",
 			message: "Could not find object.",
 			code:    "ABC",
-			module:  "Testing",
 			fix:     "Try searching for the object.",
 		}
 		stack.push(data)
@@ -28,7 +27,6 @@ func Test_push(t *testing.T) {
 			name:    "Not found error",
 			message: "Could not find object.",
 			code:    "ABC",
-			module:  "Testing",
 			fix:     "Try searching for the object.",
 		}
 		stack.push(data)
@@ -49,7 +47,6 @@ func Test_peek(t *testing.T) {
 			name:    "Not found error",
 			message: "Could not find object.",
 			code:    "ABC",
-			module:  "Testing",
 			fix:     "Try searching for the object.",
 		}
 		stack.push(data)
@@ -74,7 +71,6 @@ func Test_isEmpty(t *testing.T) {
 			name:    "Not found error",
 			message: "Could not find object.",
 			code:    "ABC",
-			module:  "Testing",
 			fix:     "Try searching for the object.",
 		}
 		stack.push(data)
@@ -98,7 +94,6 @@ func Test_size(t *testing.T) {
 			name:    "Not found error",
 			message: "Could not find object.",
 			code:    "ABC",
-			module:  "Testing",
 			fix:     "Try searching for the object.",
 		}
 		stack.push(data)
@@ -125,7 +120,6 @@ func Test_clear(t *testing.T) {
 			name:    "Not found error",
 			message: "Could not find object.",
 			code:    "ABC",
-			module:  "Testing",
 			fix:     "Try searching for the object.",
 		}
 		stack.push(data)

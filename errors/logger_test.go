@@ -45,7 +45,6 @@ func Test_GetLogger(t *testing.T) {
 			name:    "Not found error",
 			message: "Could not find object.",
 			code:    "ABC",
-			module:  "Testing",
 			fix:     "Try searching for the object.",
 		}
 
@@ -54,7 +53,7 @@ func Test_GetLogger(t *testing.T) {
 
 		// Add Error
 		logger := GetLogger()
-		logger.pool.error(Error, data, nil)
+		logger.pool.error(Error, "Testing", data, nil)
 
 		// Recover instance
 		logger2 := GetLogger()
@@ -104,7 +103,7 @@ func Test_CloseLogger(t *testing.T) {
 		pool := &ErrorPool{}
 		observer := &testLoggerObserver{}
 
-		data := &errorData{name: "Some error", message: "Some message", code: "ABC", module: "Testing", fix: "Some fix"}
+		data := &errorData{name: "Some error", message: "Some message", code: "ABC", fix: "Some fix"}
 		pool.addError(data, nil)
 		pool.Subscribe(observer)
 
@@ -128,5 +127,32 @@ func Test_CloseLogger(t *testing.T) {
 
 		CloseLogger()
 		assert.Equal(loggerInstance == nil, true)
+	})
+}
+
+func Test_SetLoggerModule(t *testing.T) {
+	t.Run("set module", func(t *testing.T) {
+		t.Cleanup(func() {
+			loggerInstance = nil
+		})
+		assert := assert.New(t)
+		pool := &ErrorPool{}
+		InitLogger(pool)
+
+		assert.Equal(loggerInstance.module, "")
+
+		SetLoggerModule("Testing Module")
+		assert.Equal(loggerInstance.module, "Testing Module")
+	})
+
+	t.Run("uninitiliazed logger", func(t *testing.T) {
+		t.Cleanup(func() {
+			loggerInstance = nil
+		})
+		assert := assert.New(t)
+
+		assert.PanicsWithError("Cannot set module if logger is not initialized.", func() {
+			SetLoggerModule("Testing Module")
+		})
 	})
 }

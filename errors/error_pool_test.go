@@ -135,10 +135,10 @@ func Test_error(t *testing.T) {
 		assert := assert.New(t)
 		pool := &ErrorPool{}
 		observer := &TestObserver{}
-		data := &errorData{name: "Fandom error", message: "Some message", code: "ABC", module: "Testing", fix: "Fix some bugs"}
+		data := &errorData{name: "Fandom error", message: "Some message", code: "ABC", fix: "Fix some bugs"}
 
 		pool.Subscribe(observer)
-		pool.error(Warning, data, nil)
+		pool.error(Warning, "Testing", data, nil)
 
 		assert.Equal(pool.errorStack.peek(), *data)
 		assert.Equal(observer.test_notified, true)
@@ -150,7 +150,7 @@ func Test_error(t *testing.T) {
 		var data *errorData = nil
 
 		assert.PanicsWithError("Error data must not be nil.", func() {
-			pool.error(Error, data, nil)
+			pool.error(Error, "Testing", data, nil)
 		})
 	})
 
@@ -167,12 +167,11 @@ func Test_error(t *testing.T) {
 			"Test error",
 			"This is a test message.",
 			"EC1",
-			"Test",
 			"Try fixing those stupid bugs.",
 		)
 
 		pool.Subscribe(observer)
-		pool.error(Error, data, nil)
+		pool.error(Error, "Test", data, nil)
 
 		expectedInfo := ErrorInfo{
 			Name:           "Test error",
@@ -182,11 +181,11 @@ func Test_error(t *testing.T) {
 			Fix:            "Try fixing those stupid bugs.",
 			CallerFuncName: "(*ErrorPool).error",
 			CallerFilename: "error_pool.go",
-			CallerLine:     104,
+			CallerLine:     103,
 			ErrorFuncName:  "Test_error.func3",
 			ErrorFilename:  "error_pool_test.go",
-			ErrorLine:      175,
-			ErrorSite:      "pool.error(Error, data, nil)",
+			ErrorLine:      174,
+			ErrorSite:      "pool.error(Error, \"Test\", data, nil)",
 			Level:          Error,
 			Timestamp:      (*resultInfo).Timestamp,
 		}
@@ -200,13 +199,13 @@ func Test_notify(t *testing.T) {
 		assert := assert.New(t)
 		pool := &ErrorPool{}
 		observer := &TestObserver{}
-		data1 := &errorData{name: "Random error", message: "Some message", code: "ABC", module: "Testing", fix: "Some fix"}
-		data2 := &errorData{name: "Random error two", message: "Some message2", code: "ABC", module: "Testing", fix: "Some fix"}
+		data1 := &errorData{name: "Random error", message: "Some message", code: "ABC", fix: "Some fix"}
+		data2 := &errorData{name: "Random error two", message: "Some message2", code: "ABC", fix: "Some fix"}
 
 		pool.Subscribe(observer)
 		pool.addError(data1, nil)
 		pool.addError(data2, nil)
-		pool.notify(Warning)
+		pool.notify(Warning, "Testing")
 
 		assert.Equal(observer.test_notified, true)
 	})
@@ -219,7 +218,7 @@ func Test_notify(t *testing.T) {
 		pool.Subscribe(observer)
 
 		assert.PanicsWithError("Cannot notify when there are no errors.", func() {
-			pool.notify(Error)
+			pool.notify(Error, "Testing")
 		})
 	})
 }
@@ -480,7 +479,6 @@ func Test_GetErrorCount(t *testing.T) {
 			name:    "Not found error",
 			message: "Could not find object.",
 			code:    "ABC",
-			module:  "Testing",
 			fix:     "Try searching for the object.",
 		}
 		pool.addError(data, nil)
@@ -809,7 +807,6 @@ func Test_validComplete(t *testing.T) {
 				name:    "Not found error",
 				message: "Could not find object.",
 				code:    "ABC",
-				module:  "Testing",
 				fix:     "Try searching for the object.",
 			},
 			false,
@@ -821,7 +818,6 @@ func Test_validComplete(t *testing.T) {
 				name:    "",
 				message: "Could not find object.",
 				code:    "ABC",
-				module:  "Testing",
 				fix:     "Try searching for the object.",
 			},
 			true,
@@ -833,7 +829,6 @@ func Test_validComplete(t *testing.T) {
 				name:    "Not found error",
 				message: "",
 				code:    "ABC",
-				module:  "Testing",
 				fix:     "Try searching for the object.",
 			},
 			true,
@@ -845,23 +840,10 @@ func Test_validComplete(t *testing.T) {
 				name:    "Not found error",
 				message: "Could not find object.",
 				code:    "",
-				module:  "Testing",
 				fix:     "Try searching for the object.",
 			},
 			true,
 			"Error code must not be empty.",
-		},
-		{
-			"invalid module",
-			errorData{
-				name:    "Not found error",
-				message: "Could not find object.",
-				code:    "ABC",
-				module:  "",
-				fix:     "Try searching for the object.",
-			},
-			true,
-			"Error module must not be empty.",
 		},
 		{
 			"invalid fix",
@@ -869,7 +851,6 @@ func Test_validComplete(t *testing.T) {
 				name:    "Not found error",
 				message: "Could not find object.",
 				code:    "ABC",
-				module:  "Testing",
 				fix:     "",
 			},
 			true,
@@ -906,7 +887,6 @@ func Test_validateIncomplete(t *testing.T) {
 				name:    "Not found error",
 				message: "Could not find object.",
 				code:    "ABC",
-				module:  "Testing",
 				fix:     "Try searching for the object.",
 			},
 			false,
@@ -918,7 +898,6 @@ func Test_validateIncomplete(t *testing.T) {
 				name:    "",
 				message: "Could not find object.",
 				code:    "ABC",
-				module:  "Testing",
 				fix:     "Try searching for the object.",
 			},
 			false,
@@ -930,7 +909,6 @@ func Test_validateIncomplete(t *testing.T) {
 				name:    "Not found error",
 				message: "",
 				code:    "ABC",
-				module:  "Testing",
 				fix:     "Try searching for the object.",
 			},
 			true,
@@ -942,23 +920,10 @@ func Test_validateIncomplete(t *testing.T) {
 				name:    "Not found error",
 				message: "Could not find object.",
 				code:    "",
-				module:  "Testing",
 				fix:     "Try searching for the object.",
 			},
 			false,
 			"",
-		},
-		{
-			"invalid module",
-			errorData{
-				name:    "Not found error",
-				message: "Could not find object.",
-				code:    "ABC",
-				module:  "",
-				fix:     "Try searching for the object.",
-			},
-			true,
-			"Error module must not be empty.",
 		},
 		{
 			"invalid fix",
@@ -966,7 +931,6 @@ func Test_validateIncomplete(t *testing.T) {
 				name:    "Not found error",
 				message: "Could not find object.",
 				code:    "ABC",
-				module:  "Testing",
 				fix:     "",
 			},
 			false,
@@ -1035,12 +999,10 @@ func Test_validateData(t *testing.T) {
 				name:    "Not found error",
 				message: "Could not find object.",
 				code:    "ABC",
-				module:  "Testing",
 				fix:     "Try searching for the object.",
 			}
 			incomplete := errorData{
 				message: "Could not find object.",
-				module:  "Testing",
 			}
 
 			if tc.complete {
