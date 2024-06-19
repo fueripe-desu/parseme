@@ -7,9 +7,11 @@ import (
 )
 
 type testLoggerObserver struct {
+	logged bool
 }
 
 func (o *testLoggerObserver) OnUpdate(info ErrorInfo) {
+	o.logged = true
 }
 
 func Test_InitLogger(t *testing.T) {
@@ -28,9 +30,9 @@ func Test_InitLogger(t *testing.T) {
 			loggerInstance = nil
 		})
 		assert := assert.New(t)
-		assert.PanicsWithError("Cannot init logger if pool is nil.", func() {
-			InitLogger(nil)
-		})
+		InitLogger(nil)
+		logger := GetLogger()
+		assert.Equal(logger.pool == nil, true)
 	})
 }
 
@@ -128,6 +130,20 @@ func Test_CloseLogger(t *testing.T) {
 		CloseLogger()
 		assert.Equal(loggerInstance == nil, true)
 	})
+
+	t.Run("nil pool", func(t *testing.T) {
+		t.Cleanup(func() {
+			loggerInstance = nil
+		})
+		assert := assert.New(t)
+		InitLogger(nil)
+		assert.Equal(loggerInstance != nil, true)
+		assert.Equal(loggerInstance.pool == nil, true)
+
+		CloseLogger()
+		assert.Equal(loggerInstance != nil, true)
+		assert.Equal(loggerInstance.pool == nil, true)
+	})
 }
 
 func Test_SetLoggerModule(t *testing.T) {
@@ -154,5 +170,49 @@ func Test_SetLoggerModule(t *testing.T) {
 		assert.PanicsWithError("Cannot set module if logger is not initialized.", func() {
 			SetLoggerModule("Testing Module")
 		})
+	})
+}
+
+func Test_log(t *testing.T) {
+	t.Run("initialized logger", func(t *testing.T) {
+		t.Cleanup(func() {
+			loggerInstance = nil
+		})
+		assert := assert.New(t)
+		pool := &ErrorPool{}
+
+		observer := &testLoggerObserver{}
+		assert.Equal(observer.logged, false)
+		pool.Subscribe(observer)
+
+		InitLogger(pool)
+		logger := GetLogger()
+
+		data := &errorData{
+			name:    "Not found error",
+			message: "Could not find object.",
+			code:    "ABC",
+			fix:     "Fix some bugs.",
+		}
+
+		logger.log(Warning, "Testing", data, nil)
+		assert.Equal(observer.logged, true)
+	})
+
+	t.Run("nil pool", func(t *testing.T) {
+		t.Cleanup(func() {
+			loggerInstance = nil
+		})
+		InitLogger(nil)
+		logger := GetLogger()
+
+		data := &errorData{
+			name:    "Not found error",
+			message: "Could not find object.",
+			code:    "ABC",
+			fix:     "Fix some bugs.",
+		}
+
+		logger.log(Warning, "Testing", data, nil)
 	})
 }
