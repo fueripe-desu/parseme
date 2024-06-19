@@ -8,41 +8,48 @@ type logger struct {
 }
 
 func (l *logger) Fatal(data *errorData, args []string) {
-	l.pool.error(Fatal, l.module, data, args)
+	l.log(Fatal, l.module, data, args)
 }
 
 func (l *logger) Error(data *errorData, args []string) {
-	l.pool.error(Error, l.module, data, args)
+	l.log(Error, l.module, data, args)
 }
 
 func (l *logger) Warning(data *errorData, args []string) {
-	l.pool.error(Warning, l.module, data, args)
+	l.log(Warning, l.module, data, args)
 }
 
 func (l *logger) Info(content string, module string) {
-	l.pool.error(Info, l.module, &errorData{message: content}, nil)
+	l.log(Info, l.module, &errorData{message: content}, nil)
 }
 
 func (l *logger) Debug(content string, module string) {
-	l.pool.error(Debug, l.module, &errorData{message: content}, nil)
+	l.log(Debug, l.module, &errorData{message: content}, nil)
 }
 
 func (l *logger) Trace(content string, module string) {
-	l.pool.error(Trace, l.module, &errorData{message: content}, nil)
+	l.log(Trace, l.module, &errorData{message: content}, nil)
+}
+
+func (l *logger) log(
+	level ErrorLevel,
+	module string,
+	data *errorData,
+	args []string,
+) {
+	if l.pool != nil {
+		l.pool.error(level, module, data, args)
+	}
 }
 
 var loggerInstance *logger
 
 func InitLogger(pool *ErrorPool) {
-	if pool == nil {
-		panic(errors.New("Cannot init logger if pool is nil."))
-	}
-
 	loggerInstance = &logger{pool: pool}
 }
 
 func GetLogger() *logger {
-	if loggerInstance == nil {
+	if !IsLoggerInitialized() {
 		panic(errors.New("Must initialize logger before accessing it."))
 	}
 
@@ -54,14 +61,14 @@ func IsLoggerInitialized() bool {
 }
 
 func CloseLogger() {
-	if loggerInstance != nil {
+	if IsLoggerInitialized() && loggerInstance.pool != nil {
 		loggerInstance.pool.ClearErrors()
 		loggerInstance.pool.UnsubscribeAll()
 	}
 }
 
 func SetLoggerModule(module string) {
-	if loggerInstance == nil {
+	if !IsLoggerInitialized() {
 		panic(errors.New("Cannot set module if logger is not initialized."))
 	}
 
